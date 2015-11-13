@@ -7,6 +7,7 @@
  *
  * The result of our compiler on this code should be :
  *
+ * The result of the execution :
  *      Error on line 26 : reduce function needs a non-empty table as its parameter
  *
  *

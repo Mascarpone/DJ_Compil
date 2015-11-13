@@ -7,7 +7,7 @@
  *
  * The result of our compiler on this code should be :
  *
- *      Error on line 24 : table with different object types can't be affected to each other
+ *      Error on line 24 : can't convert char to int
  *
  *
  * The result of the execution should be :
@@ -19,9 +19,9 @@
 int main() {
     
     int A[10];
-    char B[];
+    char c;
     
-    B = A;
+    A[0] = c;
     
     return 0;
 }
