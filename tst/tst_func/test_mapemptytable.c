@@ -1,17 +1,15 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *      Lorsqu'on passe en argument un tableau vide à la fonction map
+ *      elle retourne un tableau vide du type le type de retour de la
+ *      fonction qu'elle prend en paramètre
  *
- * This test describes the following functionnality of our compiler :
- *
- *      When passing an empty table to the map function, 
- *      returns an empty table of type the returned type of the function in parameter
- *
- *
- * The result of our compiler on this code should be :
- *
- *      Error on line 29 : trying to access to a non permitted memory zone
+ * Le résultat attendu de la compilation est :
  *
  *
- **/
+ * Le résultat attendu de l'exécution est :
+ *      Error on line 28 : trying to access to a non permitted memory zone
+ */
 
 
 char foo(int i) {

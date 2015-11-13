@@ -1,12 +1,9 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *      Certains mots sont des mots-clés et sont donc réservés
+ *      Les variables et les fonctions ne peuvent pas les prendre comme nom
  *
- * This test describes the following functionnality of our compiler :
- *
- *      Some words are keywords and so are reserved.
- *      Variables and functions can't take these for their names.
- *
- * The result of our compiler on this code should be :
- *
+ * Le résultat attendu de la compilation est :
  *      Error on line 20 : unexpected format for variable declaration
  *      Error on line 24 : function map is defined more than once
  *      Error on line 31 : keyword for is reserved
@@ -14,7 +11,10 @@
  *      Error on line 33 : keyword else is reserved
  *      Error on line 34 : unexpected format for variable declaration
  *
- **/
+ * Le résultat attendu de l'exécution est :
+ *
+ */
+
 
 
 int int(int i) { // Error

@@ -1,19 +1,14 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *      Vérifie que l'affectation dans un tableau vérifie bien
+ *      que le type des objets qu'ils contient est le même
  *
- * This test describes the following functionnality of our compiler :
+ * Le résultat attendu de la compilation est :
+ *      Error on line 19 : can't convert char to int
  *
- *      Check that table affectation verifies the type of the objects they contain
+ * Le résultat attendu de l'exécution est :
  *
- *
- * The result of our compiler on this code should be :
- *
- *      Error on line 24 : can't convert char to int
- *
- *
- * The result of the execution should be :
- *
- *
- **/
+ */
 
 
 int main() {

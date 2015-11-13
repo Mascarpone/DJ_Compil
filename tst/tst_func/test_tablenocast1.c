@@ -1,19 +1,14 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *      Vérifie que l'affectation entre les tableaux vérifie bien
+ *      que le type des objets qu'ils contiennent est le même
  *
- * This test describes the following functionnality of our compiler :
+ * Le résultat attendu de la compilation est :
+ *      Error on line 19 : table with different object types can't be affected to each other
  *
- *      Check that table affectation verifies the type of the objects they contain
+ * Le résultat attendu de l'exécution est :
  *
- *
- * The result of our compiler on this code should be :
- *
- *      Error on line 24 : table with different object types can't be affected to each other
- *
- *
- * The result of the execution should be :
- *
- *
- **/
+ */
 
 
 int main() {

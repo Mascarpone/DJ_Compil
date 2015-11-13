@@ -1,21 +1,14 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *      L'opération d'affectation retourne la valeur affectée
+ *      "var = expr" retourne "expr"
+ *      La valeur int 0 signifie faux et les autres signifient vrai
  *
- * This test describes the following functionnality of our compiler :
- *
- *      The affectation operation returns the affected value
- *      "var = expr" returns "expr"
- *
- *      The integer value 0 means "false" and the others mean "true"
- *
- *
- * The result of our compiler on this code should be :
+ * Le résultat attendu de la compilation est :
  *
  *
- *
- * The result of the execution should be :
- *
+ * Le résultat attendu de l'exécution est :
  *      3... 2... 1... youpi !
- *
  *
  */
 

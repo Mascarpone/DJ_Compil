@@ -1,15 +1,13 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *      Lorsqu'on passe un tableau vide comme paramètre à la fonction
+ *      reduce, cela soulève une erreur à l'éxecution
  *
- * This test describes the following functionnality of our compiler :
- *
- *      When passing an empty table to the reduce function, the compiler raises an error
+ * Le résultat attendu de la compilation est :
  *
  *
- * The result of our compiler on this code should be :
- *
- * The result of the execution :
- *      Error on line 26 : reduce function needs a non-empty table as its parameter
- *
+ * Le résultat attendu de l'exécution est :
+ *      Error on line 25 : reduce function needs a non-empty table as its parameter
  *
  */
 

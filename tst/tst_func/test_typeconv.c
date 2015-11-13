@@ -1,4 +1,16 @@
 /*
+ * Ce test décrit la fonctionnalité suivante du compilateur :
+ *
+ *
+ * Le résultat attendu de la compilation est :
+ *
+ *
+ * Le résultat attendu de l'exécution est :
+ *
+ */
+
+
+/*
  *
  * This test describes the following functionnality of our compiler :
  *
@@ -21,7 +33,7 @@ int main() {
     float b, d;
     b = 1.3;
     
-    a = b; // OK : round
+    a = b; // OK : floor
     d = c; // OK
     
     return 0;
