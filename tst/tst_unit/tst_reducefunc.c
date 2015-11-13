@@ -13,18 +13,19 @@
  */
 
 
-int foo(int a, int b) {
+int foo(int a, int b)
+{
     return a + b;
 }
 
 
-int main() {
-    
+int main()
+{
     int i;
     int T[5] = {2, 3, 5, 11, 21};
     i = reduce(foo, T);
-    
+
     printint(i);
-    
+
     return 0;
 }

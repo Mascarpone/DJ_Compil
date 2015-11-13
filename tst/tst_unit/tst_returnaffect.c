@@ -5,25 +5,25 @@
  *      La valeur int 0 signifie faux et les autres signifient vrai
  *
  * Le résultat attendu de la compilation est :
- *
+ *      Pas d'erreur.
  *
  * Le résultat attendu de l'exécution est :
  *      3... 2... 1... youpi !
  *
  */
 
+int main()
+{
 
-int main() {
-    
     int x;
     x = 4;
-    
+
     while ((x = x - 1)) {
         printint(x);
         print("... ");
     }
-    
+
     print("youpi !\n");
-    
+
     return 0;
 }

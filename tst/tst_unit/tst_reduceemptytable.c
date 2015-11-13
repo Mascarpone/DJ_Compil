@@ -7,22 +7,20 @@
  *
  *
  * Le résultat attendu de l'exécution est :
- *      Error on line 25 : reduce function needs a non-empty table as its parameter
+ *      Error on line 23 : Tableau vide
  *
  */
 
-
-int foo(int a, int b) {
-    
+int foo(int a, int b)
+{
     return 0;
 }
 
-
-int main() {
-    
+int main()
+{
     int i;
     int T[];
     i = reduce(foo, T);
-    
+
     return 0;
 }

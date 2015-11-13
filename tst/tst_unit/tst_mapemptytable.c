@@ -8,24 +8,24 @@
  *
  *
  * Le résultat attendu de l'exécution est :
- *      Error on line 28 : trying to access to a non permitted memory zone
+ *      Erreur ligne 28 : dépassement mémoire. Le comportement n'est pas spécifié.
  */
 
 
 char foo(int i) {
-    
+
     return 'a';
 }
 
 
 int main() {
-    
+
     int A[];
     char B[];
     B = map(foo, A);
     // ok until this line
-    
+
     printchar(B[0]);
-    
+
     return 0;
 }
