@@ -1,27 +1,31 @@
 # TODO: description
 
-import ply.lex as lex
+import sys
+if sys.version_info[0] >= 3:
+    raw_input = input
+
 
 
 # Reserved words
 reserved = (
     'BREAK', 'CASE', 'CHAR', 'CONTINUE', 'DEFAULT', 'DO', 'ELSE', 'FLOAT',
-    'FOR', 'IF', 'INT', 'RETURN', 'SWITCH', 'VOID', 'WHILE'
+    'FOR', 'IF', 'INT', 'RETURN', 'SWITCH', 'VOID', 'WHILE', 'EXTERN'
     )
 
 tokens = reserved + (
     # Literals (identifier, integer constant, float constant, string constant, char const)
-    'ID', 'TYPEID', 'ICONST', 'FCONST', 'SCONST', 'CCONST',
+    'ID', 'ICONST', 'FCONST', 'SCONST', 'CCONST',
+    # 'TYPEID',
 
     # Operators (+,-,*,/,%,|,&,~,^,<<,>>, ||, &&, !, <, <=, >, >=, ==, !=)
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
-    'OR', 'AND', 'NOT', 'XOR', 'LSHIFT', 'RSHIFT',
+    #'OR', 'AND', 'NOT', 'XOR', 'LSHIFT', 'RSHIFT',
     'LOR', 'LAND', 'LNOT',
     'LT', 'LE', 'GT', 'GE', 'EQ', 'NE',
 
     # Assignment (=, *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=)
     'EQUALS', 'TIMESEQUAL', 'DIVEQUAL', 'MODEQUAL', 'PLUSEQUAL', 'MINUSEQUAL',
-    'LSHIFTEQUAL','RSHIFTEQUAL', 'ANDEQUAL', 'XOREQUAL', 'OREQUAL',
+    #'LSHIFTEQUAL','RSHIFTEQUAL', 'ANDEQUAL', 'XOREQUAL', 'OREQUAL',
 
     # Increment/decrement (++,--)
     'PLUSPLUS', 'MINUSMINUS',
@@ -34,7 +38,7 @@ tokens = reserved + (
     )
 
 # Completely ignored characters
-t_ignore           = ' \t\x0c'
+t_ignore           = ' \t\v\n\f' #\x0c
 
 # Newlines
 def t_NEWLINE(t):
@@ -47,12 +51,12 @@ t_MINUS            = r'-'
 t_TIMES            = r'\*'
 t_DIVIDE           = r'/'
 t_MOD              = r'%'
-t_OR               = r'\|'
-t_AND              = r'&'
-t_NOT              = r'~'
-t_XOR              = r'\^'
-t_LSHIFT           = r'<<'
-t_RSHIFT           = r'>>'
+#t_OR               = r'\|'
+#t_AND              = r'&'
+#t_NOT              = r'~'
+#t_XOR              = r'\^'
+#t_LSHIFT           = r'<<'
+#t_RSHIFT           = r'>>'
 t_LOR              = r'\|\|'
 t_LAND             = r'&&'
 t_LNOT             = r'!'
@@ -71,21 +75,15 @@ t_DIVEQUAL         = r'/='
 t_MODEQUAL         = r'%='
 t_PLUSEQUAL        = r'\+='
 t_MINUSEQUAL       = r'-='
-t_LSHIFTEQUAL      = r'<<='
-t_RSHIFTEQUAL      = r'>>='
-t_ANDEQUAL         = r'&='
-t_OREQUAL          = r'\|='
-t_XOREQUAL         = r'\^='
+#t_LSHIFTEQUAL      = r'<<='
+#t_RSHIFTEQUAL      = r'>>='
+#t_ANDEQUAL         = r'&='
+#t_OREQUAL          = r'\|='
+#t_XOREQUAL         = r'\^='
 
 # Increment/decrement
 t_PLUSPLUS         = r'\+\+'
 t_MINUSMINUS       = r'--'
-
-# ->
-t_ARROW            = r'->'
-
-# ?
-t_CONDOP           = r'\?'
 
 # Delimeters
 t_LPAREN           = r'\('
@@ -98,7 +96,6 @@ t_COMMA            = r','
 t_PERIOD           = r'\.'
 t_SEMI             = r';'
 t_COLON            = r':'
-t_ELLIPSIS         = r'\.\.\.'
 
 # Identifiers and reserved words
 
@@ -112,26 +109,21 @@ def t_ID(t):
     return t
 
 # Integer literal
-t_ICONST = r'\d+([uU]|[lL]|[uU][lL]|[lL][uU])?'
+t_ICONST = r'\d+'
 
 # Floating literal
-t_FCONST = r'((\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
+t_FCONST = r'(\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+)'
 
 # String literal
 t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
 
-# Character constant 'c' or L'c'
-t_CCONST = r'(L)?\'([^\\\n]|(\\.))*?\''
+# Character constant 'c'
+t_CCONST = r'\'([^\\\n]|(\\.))*?\''
 
 # Comments
 def t_comment(t):
-    r'/\*(.|\n)*?\*/'
+    r'(/\*(.|\n)*?\*/) | (//.*\n)'
     t.lexer.lineno += t.value.count('\n')
-
-# Preprocessor directive (ignored)
-def t_preprocessor(t):
-    r'\#(.)*?\n'
-    t.lexer.lineno += 1
 
 def t_error(t):
     print("Illegal character %s" % repr(t.value[0]))
@@ -139,6 +131,8 @@ def t_error(t):
 
 
 
+# build the lexer
+import ply.lex as lex
 lex.lex()
 
 if __name__ =="__main__":
