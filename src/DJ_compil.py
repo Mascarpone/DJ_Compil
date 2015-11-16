@@ -169,21 +169,53 @@ lex.lex()
 
 # first rule because it's the starting symbol
 def p_program(p):
-    '''program : external_declaration
-               | program external_declaration'''
+    '''program : external_declaration'''
+    #p[0].code = p[1].code
     pass
 
-def p_primary_expression(p):
-    '''primary_expression : ID
-                          | ICONST
-                          | FCONST
-                          | LPAREN expression RPAREN
-                          | MAP LPAREN postfix_expression COMMA postfix_expression RPAREN
-                          | REDUCE LPAREN postfix_expression COMMA postfix_expression RPAREN
-                          | ID LPAREN RPAREN
-                          | ID LPAREN argument_expression_list RPAREN
-                          | ID PLUSPLUS
-                          | ID MINUSMINUS'''
+def p_program2(p):
+    '''program : program external_declaration'''
+    #p[0].code = p[1].code + "\n" + p[2].code
+    pass
+
+def p_primary_expression_id(p):
+    '''primary_expression : ID'''
+    pass
+
+def p_primary_expression_iconst(p):
+    '''primary_expression : ICONST'''
+    pass
+
+def p_primary_expression_fconst(p):
+    '''primary_expression : FCONST'''
+    pass
+
+def p_primary_expression_paren_expr(p):
+    '''primary_expression : LPAREN expression RPAREN'''
+    pass
+
+def p_primary_expression_map(p):
+    '''primary_expression : MAP LPAREN postfix_expression COMMA postfix_expression RPAREN'''
+    pass
+
+def p_primary_expression_reduce(p):
+    '''primary_expression : REDUCE LPAREN postfix_expression COMMA postfix_expression RPAREN'''
+    pass
+
+def p_primary_expression_id_paren(p):
+    '''primary_expression : ID LPAREN RPAREN'''
+    pass
+
+def p_primary_expression_id_paren_args(p):
+    '''primary_expression : ID LPAREN argument_expression_list RPAREN'''
+    pass
+
+def p_primary_expression_id_plusplus(p):
+    '''primary_expression : ID PLUSPLUS'''
+    pass
+
+def p_primary_expression_id_minusminus(p):
+    '''primary_expression : ID MINUSMINUS'''
     pass
 
 def p_postfix_expression(p):
@@ -295,7 +327,7 @@ def p_compound_statement(p):
 
 def p_declaration_list(p):
     '''declaration_list : declaration
-                        | declarator_list declaration'''
+                        | declaration_list declaration'''
     pass
 
 def p_statement_list(p):
@@ -327,10 +359,12 @@ def p_jump_statement(p):
 def p_external_declaration(p):
     '''external_declaration : function_definition
                             | declaration'''
+    #p[0].code = p[1].code
     pass
 
 def p_function_definition(p):
     '''function_definition : type_name declarator compound_statement'''
+    p[0].code = "declare " + p[1].type + " @" + p[2].
     pass
 
 def p_error(p):
