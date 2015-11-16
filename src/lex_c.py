@@ -8,14 +8,19 @@ if sys.version_info[0] >= 3:
 
 # Reserved words
 reserved = (
-    'BREAK', 'CASE', 'CHAR', 'CONTINUE', 'DEFAULT', 'DO', 'ELSE', 'FLOAT',
-    'FOR', 'IF', 'INT', 'RETURN', 'SWITCH', 'VOID', 'WHILE', 'EXTERN'
+    'VOID', 'CHAR', 'INT', 'FLOAT',
+    'EXTERN',
+    'MAP', 'REDUCE',
+    'IF', 'ELSE',
+    'FOR', 'WHILE', 'DO',
+    #'BREAK', 'CONTINUE',
+    'RETURN',
+    #'SWITCH', 'CASE', 'DEFAULT',
     )
 
 tokens = reserved + (
     # Literals (identifier, integer constant, float constant, string constant, char const)
-    'ID', 'ICONST', 'FCONST', 'SCONST', 'CCONST',
-    # 'TYPEID',
+    'ID', 'ICONST', 'FCONST', # 'SCONST', 'CCONST',
 
     # Operators (+,-,*,/,%,|,&,~,^,<<,>>, ||, &&, !, <, <=, >, >=, ==, !=)
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
@@ -34,11 +39,11 @@ tokens = reserved + (
     'LPAREN', 'RPAREN',
     'LBRACKET', 'RBRACKET',
     'LBRACE', 'RBRACE',
-    'COMMA', 'PERIOD', 'SEMI', 'COLON',
+    'COMMA', 'SEMI',
     )
 
 # Completely ignored characters
-t_ignore           = ' \t\v\n\f' #\x0c
+t_ignore           = ' \t\v\f' #\x0c
 
 # Newlines
 def t_NEWLINE(t):
@@ -93,15 +98,15 @@ t_RBRACKET         = r'\]'
 t_LBRACE           = r'\{'
 t_RBRACE           = r'\}'
 t_COMMA            = r','
-t_PERIOD           = r'\.'
+#t_PERIOD           = r'\.'
 t_SEMI             = r';'
-t_COLON            = r':'
 
 # Identifiers and reserved words
 
 reserved_map = { }
 for r in reserved:
     reserved_map[r.lower()] = r
+
 
 def t_ID(t):
     r'[A-Za-z_][\w_]*'
@@ -115,10 +120,10 @@ t_ICONST = r'\d+'
 t_FCONST = r'(\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+)'
 
 # String literal
-t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
+#t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
 
 # Character constant 'c'
-t_CCONST = r'\'([^\\\n]|(\\.))*?\''
+#t_CCONST = r'\'([^\\\n]|(\\.))*?\''
 
 # Comments
 def t_comment(t):

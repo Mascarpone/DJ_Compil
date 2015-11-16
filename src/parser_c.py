@@ -1,14 +1,20 @@
 # TODO: description
 
-import lex_c
+from lex_c import *
 
 
 # global tables
 # TODO: Do it ! just... DO IT !
 
 
+# first rule because it's the starting symbol
+def p_program(p):
+    '''program : external_declaration
+               | program external_declaration'''
+    pass
+
 def p_primary_expression(p):
-    '''primary_expression : IDENTIFIER
+    '''primary_expression : ID
                           | ICONST
                           | FCONST
                           | LPAREN expression RPAREN
@@ -44,7 +50,8 @@ def p_unary_operator(p):
 def p_multiplicative_expression(p):
     '''multiplicative_expression : unary_expression
                                   | multiplicative_expression TIMES unary_expression
-                                  | multiplicative_expression DIVIDE unary_expression'''
+                                  | multiplicative_expression DIVIDE unary_expression
+                                  | multiplicative_expression MOD unary_expression'''
     pass
 
 def p_additive_expression(p):
@@ -69,12 +76,12 @@ def p_expression(p):
     pass
 
 def p_assignment_operator(p):
-    ''' assignment_operator : EQUALS
-                            | TIMESEQUAL
-                            | DIVEQUAL
-                            | MODEQUAL
-                            | PLUSEQUAL
-                            | MINUSEQUAL'''
+    '''assignment_operator : EQUALS
+                           | TIMESEQUAL
+                           | DIVEQUAL
+                           | MODEQUAL
+                           | PLUSEQUAL
+                           | MINUSEQUAL'''
     pass
 
 def p_declaration(p):
@@ -89,6 +96,7 @@ def p_declarator_list(p):
 
 def p_type_name(p):
     '''type_name : VOID
+                 | CHAR
                  | INT
                  | FLOAT'''
     pass
@@ -156,11 +164,6 @@ def p_jump_statement(p):
                       | RETURN expression SEMI'''
     pass
 
-def p_program(p):
-    '''program : external_declaration
-               | program external_declaration'''
-    pass
-
 def p_external_declaration(p):
     '''external_declaration : function_definition
                             | declaration'''
@@ -172,7 +175,7 @@ def p_function_definition(p):
 
 def p_error(p):
     if p:
-        print("Syntax error at line " + p.lineno + " : '" + p.value + "'")
+        print("Syntax error at line " + str(p.lineno) + " : '" + p.value + "'")
     else:
         print("Syntax error at EOF")
 
@@ -181,13 +184,11 @@ def p_error(p):
 
 # build parser
 import ply.yacc as yacc
-yacc.yacc()
+yacc.yacc(outputdir='generated')
 
-
-
-#yacc.yacc(outputdir='generated')
 
 if __name__ == "__main__":
-    import sysprog = file(sys.argv[1]).read()
+    import sys
+    prog = file(sys.argv[1]).read()
     result = yacc.parse(prog)
     print result
