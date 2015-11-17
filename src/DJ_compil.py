@@ -19,7 +19,7 @@ if sys.version_info[0] >= 3:
 
 
 
-############################   LEXER   ############################
+##############################   LEXER   ##############################
 
 
 # Reserved words
@@ -167,16 +167,104 @@ lex.lex()
 
 
 
+
+
 # first rule because it's the starting symbol
-def p_program(p):
+def p_program_1(p):
+    '''program : program external_declaration'''
+    #p[0].code = p[1].code + "\n" + p[2].code
+    pass
+
+def p_program_2(p):
     '''program : external_declaration'''
     #p[0].code = p[1].code
     pass
 
-def p_program2(p):
-    '''program : program external_declaration'''
-    #p[0].code = p[1].code + "\n" + p[2].code
+def p_external_declaration_1(p):
+    '''external_declaration : function_definition'''
     pass
+
+def p_external_declaration_2(p):
+    '''external_declaration : declaration'''
+    #p[0].code = p[1].code
+    pass
+
+def p_function_definition_3(p):
+    '''function_definition : type_name declarator compound_statement'''
+    p[0].code = "declare " + p[1].code + " @"# + p[2].code + "()"
+    pass
+
+def p_type_name_1(p):
+    '''type_name : VOID'''
+    p[0].code = "void"
+    pass
+
+def p_type_name_2(p):
+    '''type_name : CHAR'''
+    p[0].code = "i8"
+    pass
+
+def p_type_name_3(p):
+    '''type_name : INT'''
+    p[0].code = "i32"
+    pass
+
+def p_type_name_4(p):
+    '''type_name : FLOAT'''
+    p[0].code = "float"
+    pass
+
+def p_declarator_1(p):
+    '''declarator : ID'''
+    p[0].code = p[1]
+    pass
+
+def p_declarator_2(p):
+    '''declarator : LPAREN declarator RPAREN'''
+    p[0].code = ""
+    pass
+
+def p_declarator_3(p):
+    '''declarator : declarator LBRACKET ICONST RBRACKET'''
+    p[0].code = ""
+    pass
+
+def p_declarator_4(p):
+    '''declarator : declarator LBRACKET RBRACKET'''
+    p[0].code = ""
+    pass
+
+def p_declarator_5(p):
+    '''declarator : declarator LPAREN parameter_list RPAREN'''
+    p[0].code = ""
+    pass
+
+def p_declarator_6(p):
+    '''declarator : declarator LPAREN RPAREN'''
+    p[0].code = ""
+    pass
+
+def p_compound_statement_1(p):
+    '''compound_statement : LBRACE RBRACE'''
+    pass
+
+def p_compound_statement_2(p):
+    '''compound_statement : LBRACE statement_list RBRACE'''
+    pass
+
+def p_compound_statement_3(p):
+    '''compound_statement : LBRACE declaration_list statement_list RBRACE'''
+    pass
+
+def p_declaration_1(p):
+    '''declaration : type_name declarator_list SEMI'''
+    pass
+
+def p_declaration_2(p):
+    '''declaration : EXTERN type_name declarator_list SEMI'''
+    pass
+
+# ---------------- trié jusque là
 
 def p_primary_expression_id(p):
     '''primary_expression : ID'''
@@ -276,30 +364,9 @@ def p_assignment_operator(p):
                            | MINUSEQUAL'''
     pass
 
-def p_declaration(p):
-    '''declaration : type_name declarator_list SEMI
-                   | EXTERN type_name declarator_list SEMI'''
-    pass
-
 def p_declarator_list(p):
     '''declarator_list : declarator
                        | declarator_list COMMA declarator'''
-    pass
-
-def p_type_name(p):
-    '''type_name : VOID
-                 | CHAR
-                 | INT
-                 | FLOAT'''
-    pass
-
-def p_declarator(p):
-    '''declarator : ID
-                  | LPAREN declarator RPAREN
-                  | declarator LBRACKET ICONST RBRACKET
-                  | declarator LBRACKET RBRACKET
-                  | declarator LPAREN parameter_list RPAREN
-                  | declarator LPAREN RPAREN'''
     pass
 
 def p_parameter_list(p):
@@ -317,12 +384,6 @@ def p_statement(p):
                  | selection_statement
                  | iteration_statement
                  | jump_statement'''
-    pass
-
-def p_compound_statement(p):
-    '''compound_statement : LBRACE RBRACE
-                          | LBRACE statement_list RBRACE
-                          | LBRACE declaration_list statement_list RBRACE'''
     pass
 
 def p_declaration_list(p):
@@ -354,17 +415,6 @@ def p_iteration_statement(p):
 def p_jump_statement(p):
     '''jump_statement : RETURN SEMI
                       | RETURN expression SEMI'''
-    pass
-
-def p_external_declaration(p):
-    '''external_declaration : function_definition
-                            | declaration'''
-    #p[0].code = p[1].code
-    pass
-
-def p_function_definition(p):
-    '''function_definition : type_name declarator compound_statement'''
-    p[0].code = "declare " + p[1].type + " @" + p[2].
     pass
 
 def p_error(p):
