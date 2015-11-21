@@ -15,7 +15,9 @@
 import sys
 if sys.version_info[0] >= 3:
     raw_input = input
-
+# change directory for generated files
+import os
+os.chdir("build")
 
 
 
@@ -161,107 +163,181 @@ lex.lex()
 #############################   PARSER   #############################
 
 
-# global tables
-# TODO: Do it ! just... DO IT !
+# ids and their corresponding types
+class Context:
+    '''A class to describe ids visibility and their corresponding types'''
+
+    # the surrounding context. If it's None, it means that it's the global context
+    prev = None
+    # the dictionary associating each id to its type
+    id_type = {}
+
+    def __init__(self, c = None):
+        '''Creates a new context, with c as surrounding context'''
+        self.prev = None
+        self.id_type = {}
+
+    def getParent(self):
+        '''returns the surrounding context'''
+        return self.prev
+
+    def isGlobal(self):
+        '''Tells if this context is the global context (no parent)'''
+        return self.prev is None
+
+    def exists(self, id):
+        '''tells if an id is known in the current context'''
+        if id in self.id_type:
+            return True
+        elif self.prev is None:
+            return False
+        else:
+            return self.prev.exists(id)
+
+    def getType(self, id):
+        '''returns the type of an id, or None if not reachable in current context'''
+        if id in self.id_type:
+            return self.id_type[id]
+        elif self.prev is None:
+            return None
+        else:
+            return self.prev.getType(id)
+
+    def setType(self, id, t):
+        '''sets the type of id in current context to t'''
+        self.id_type[id] = t
 
 
 
+
+# now, we can use this awsome context class
+currentContext = Context()
+def enterNewContext():
+    '''Sets current context as a new context with the previous surrounding context as parent.
+    e.g. when entering a { ... } block'''
+    nc = Context(currentContext)
+    currentContext = nc
+
+def closeCurrentContext():
+    '''Set current context back to its parent'''
+    if currentContext.isGlobal():
+        # is there a best way to raise an error ?
+        print "ERROR : trying to close global context"
+    else:
+        currentContext = currentContext.getParent()
+
+
+
+
+def checkGenericErrors(result):
+    '''Check result to throw erros/warnings at the end of the compilation'''
+    # look for main
+    pass
 
 
 
 # first rule because it's the starting symbol
 def p_program_1(p):
     '''program : program external_declaration'''
-    #p[0].code = p[1].code + "\n" + p[2].code
+    p[0] = {"code" : p[1]["code"] + p[2]["code"] + "\n"}
     pass
 
 def p_program_2(p):
     '''program : external_declaration'''
-    #p[0].code = p[1].code
+    p[0] = {"code" : p[1]["code"] + "\n"}
     pass
 
 def p_external_declaration_1(p):
     '''external_declaration : function_definition'''
+    p[0] = {"code" : p[1]["code"]}
     pass
 
 def p_external_declaration_2(p):
     '''external_declaration : declaration'''
-    #p[0].code = p[1].code
+    p[0] = {"code" : ""}
     pass
 
 def p_function_definition_3(p):
     '''function_definition : type_name declarator compound_statement'''
-    p[0].code = "declare " + p[1].code + " @"# + p[2].code + "()"
+    if currentContext.exists(p[2]["name"]):
+        sys.stderr.write("*WARNING* You are redefining "+p[2]["name"]+"\n")
+    currentContext.setType(p[2]["name"], p[1]["code"]) # TODO: don't forget functions types
+    p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2]["code"] + " " + p[3]["code"]}
     pass
 
 def p_type_name_1(p):
     '''type_name : VOID'''
-    p[0].code = "void"
+    p[0] = {"code" : "void"}
     pass
 
 def p_type_name_2(p):
     '''type_name : CHAR'''
-    p[0].code = "i8"
+    p[0] = {"code" : "i8"}
     pass
 
 def p_type_name_3(p):
     '''type_name : INT'''
-    p[0].code = "i32"
+    p[0] = {"code" : "i32"}
     pass
 
 def p_type_name_4(p):
     '''type_name : FLOAT'''
-    p[0].code = "float"
+    p[0] = {"code" : "float"}
     pass
 
 def p_declarator_1(p):
     '''declarator : ID'''
-    p[0].code = p[1]
+    p[0] = {"name" : p[1], "code" : p[1]}
     pass
 
 def p_declarator_2(p):
     '''declarator : LPAREN declarator RPAREN'''
-    p[0].code = ""
+    p[0] = {"name" : p[2]["name"], "code" : p[2]["code"]}
     pass
 
 def p_declarator_3(p):
     '''declarator : declarator LBRACKET ICONST RBRACKET'''
-    p[0].code = ""
+    p[0] = {"name" : p[1]["name"], "code" : p[1]["code"]}
     pass
 
 def p_declarator_4(p):
     '''declarator : declarator LBRACKET RBRACKET'''
-    p[0].code = ""
+    p[0] = {"name" : p[1]["name"], "code" : p[1]["code"]}
     pass
 
 def p_declarator_5(p):
     '''declarator : declarator LPAREN parameter_list RPAREN'''
-    p[0].code = ""
+    p[0] = {"name" : p[1]["name"], "code" : p[1]["code"] + "(...)"}
     pass
 
 def p_declarator_6(p):
     '''declarator : declarator LPAREN RPAREN'''
-    p[0].code = ""
+    p[0] = {"name" : p[1]["name"], "code" : p[1]["code"] + "()"}
     pass
 
 def p_compound_statement_1(p):
     '''compound_statement : LBRACE RBRACE'''
+    p[0] = {"code" : "{}"}
     pass
 
 def p_compound_statement_2(p):
     '''compound_statement : LBRACE statement_list RBRACE'''
+    p[0] = {"code" : "{\n...\n}"}
     pass
 
 def p_compound_statement_3(p):
     '''compound_statement : LBRACE declaration_list statement_list RBRACE'''
+    p[0] = {"code" : "{\n...\n}"}
     pass
 
 def p_declaration_1(p):
     '''declaration : type_name declarator_list SEMI'''
+    p[0] = {"code" : ""}
     pass
 
 def p_declaration_2(p):
     '''declaration : EXTERN type_name declarator_list SEMI'''
+    p[0] = {"code" : "declare "}
     pass
 
 # ---------------- trié jusque là
@@ -436,6 +512,7 @@ yacc.yacc()
 
 if __name__ == "__main__":
     import sys
-    prog = file(sys.argv[1]).read()
+    prog = file("../" + sys.argv[1]).read()
     result = yacc.parse(prog)
-    print result
+    checkGenericErrors(result)
+    print result["code"]
