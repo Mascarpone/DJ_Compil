@@ -23,8 +23,9 @@ loopprint_body:
   %size = getelementptr %chartable* %ct, i32 0, i32 0
   %i.val = load i32* %i
   %ct.content = getelementptr %chartable* %ct, i32 0, i32 1
-  %ct.i = getelementptr(i8* %ct.content, i32 0, i32 %i.val)  ;;;;;; TODO : Modifier pour accéder à la bonne case du tableau
-  %ct.i.val = load i8* %ct.i
+  %ct.i = getelementptr i8** %ct.content, i32 %i.val  
+  %ct.i.valptr = load i8** %ct.i
+  %ct.i.val = load i8* %ct.i.valptr
   call void @printchar(i8 %ct.i.val)
   br label %loopprint_close
 
@@ -35,4 +36,5 @@ loopprint_close:
   br label %loopprint_head
 
 loopprint_exit:
+  ret void
 }
