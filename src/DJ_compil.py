@@ -174,7 +174,7 @@ class Context:
 
     def __init__(self, c = None):
         '''Creates a new context, with c as surrounding context'''
-        self.prev = None
+        self.prev = c
         self.id_type = {}
 
     def getParent(self):
@@ -209,20 +209,32 @@ class Context:
 
 
 
+# A type is a list
+# the first element tells if it's a simple value (i32, float, i8), an array, or a function
+#   - "v" : simple value
+#   - "a" : array
+#   - "f" : function
+# the second element is the type of the element
+#   - if its a value the type is a string representing the type
+#   - if it's a 1D array, the type is a string representing the type of the elements, if it's a 2D+ array, it's a new list describing the sub-array
+#   - if it's a function, the type is a function with first element as return type, and others elements as arguments.
+
 
 # now, we can use this awsome context class
 currentContext = Context()
 def enterNewContext():
     '''Sets current context as a new context with the previous surrounding context as parent.
     e.g. when entering a { ... } block'''
+    global currentContext
     nc = Context(currentContext)
     currentContext = nc
 
 def closeCurrentContext():
     '''Set current context back to its parent'''
+    global currentContext
     if currentContext.isGlobal():
         # is there a best way to raise an error ?
-        print "ERROR : trying to close global context"
+        sys.stderr.write("*ERROR*: trying to close global context")
     else:
         currentContext = currentContext.getParent()
 
@@ -241,6 +253,7 @@ def checkGenericErrors(result):
 def p_program_1(p):
     '''program : program external_declaration'''
     p[0] = {"code" : p[1]["code"] + "\n" + p[2]["code"] + "\n"}
+    #print currentContext.id_type
 
 
 def p_program_2(p):
@@ -254,141 +267,140 @@ def p_external_declaration_1(p):
 
 
 def p_external_declaration_2(p):
-    '''external_declaration : declaration'''
-    p[0] = {"code" : ""} #TODO it
+    '''external_declaration : declaration_statement'''
+    p[0] = {"code" : "external ..."} #TODO it
     pass
 
 def p_function_definition(p):
-    '''function_definition : type_name declarator compound_statement'''
-    if currentContext.exists(p[2]["name"]):
-        sys.stderr.write("*WARNING* You are redefining "+p[2]["name"]+"\n")
-    if not p[2]["type"] is None: # function
-        currentContext.setType(p[2]["name"], p[1]["code"]+"("+p[2]["type"]+")")
-    else:
-        sys.stderr.write("This i not a function declarator\n");
-        currentContext.setType(p[2]["name"], p[1]["code"])
-    p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2]["code"] + " " + p[3]["code"]}
+    '''function_definition : type_name ID arguments_declaration compound_statement'''
+    if currentContext.exists(p[2]):
+        sys.stderr.write("*WARNING* (l." + str(p.lineno(2)) + "): You are redefining '"+p[2]+"'\n")
+    elif p[2] in reserved:
+        sys.stderr.write("*ERROR* (l." + str(p.lineno(2)) + "): '" + p[2] + "' is a reseved keyword\n")
+        raise SyntaxError
+    #closeCurrentContext() # uncomment when the opening is coded during arguments parsing
+    currentContext.setType(p[2], ["f", [p[1]["type"]]+p[3]["type"]])
+    p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2] + "(" + p[3]["code"] + ")" + p[4]["code"]}
     pass
 
-def p_type_name_1(p):
-    '''type_name : VOID'''
-    p[0] = {"type" : "void",
-            "code" : "void"}
+def p_arguments_declaration_1(p):
+    '''arguments_declaration : LPAREN parameter_list RPAREN'''
+    p[0] = {"type" : p[2]["type"],
+            "code" : p[2]["code"]}
     pass
 
-def p_type_name_2(p):
-    '''type_name : CHAR'''
-    p[0] = {"type" : "i8",
-            "code" : "i8"}
-    pass
-
-def p_type_name_3(p):
-    '''type_name : INT'''
-    p[0] = {"type" : "i32",
-            "code" : "i32"}
-    pass
-
-def p_type_name_4(p):
-    '''type_name : FLOAT'''
-    p[0] = {"type" : "float",
-            "code" : "float"}
-    pass
-
-def p_type_name_5(p):
-    '''type_name : type_name LBRACKET RBRACKET'''
-    p[0] = {"code" : ".", # TODO array type
-            "type" : p[1]["type"] + "[]"}
-    pass
-
-def p_type_name_6(p):
-    '''type_name : type_name LBRACKET ICONST RBRACKET'''
-    p[0] = {"code" : ".", # TODO array type
-            "type" : p[1]["type"] + "[]"} #TODO: store size ?
-    pass
-
-def p_declarator_1(p):
-    '''declarator : ID'''
-    p[0] = {"name" : p[1],
-            "type" : None,
-            "code" : p[1]}
-    pass
-
-## Les déclarators suivants ne sont pas conformes à notre spécification
-#def p_declarator_2(p):
-#    '''declarator : LPAREN declarator RPAREN'''
-#    p[0] = {"name" : p[2]["name"],
-#            "type" : p[2]["type"],
-#            "code" : p[2]["code"]}
-#    pass
-#
-#def p_declarator_3(p):
-#    '''declarator : declarator LBRACKET ICONST RBRACKET'''
-#    p[0] = {"name" : p[1]["name"],
-#            "type" : p[1]["type"],
-#            "code" : p[1]["code"]}
-#    pass
-#
-#def p_declarator_4(p):
-#    '''declarator : declarator LBRACKET RBRACKET'''
-#    p[0] = {"name" : p[1]["name"], "code" : p[1]["code"]}
-#    pass
-
-def p_declarator_5(p):
-    '''declarator : declarator LPAREN parameter_list RPAREN'''
-    p[0] = {"name" : p[1]["name"],
-            "type" : p[3]["type"],
-            "code" : p[1]["code"] + "(" + p[3]["code"] +")"}
-    pass
-
-def p_declarator_6(p):
-    '''declarator : declarator LPAREN RPAREN'''
-    p[0] = {"name" : p[1]["name"],
-            "type" : "",
-            "code" : p[1]["code"] + "()"}
-    pass
-
-def p_compound_statement_1(p):
-    '''compound_statement : LBRACE RBRACE'''
-    p[0] = {"code" : "{}"}
-    pass
-
-def p_compound_statement_2(p):
-    '''compound_statement : LBRACE statement_list RBRACE'''
-    p[0] = {"code" : "{\n...\n}"}
-    pass
-
-def p_compound_statement_3(p):
-    '''compound_statement : LBRACE declaration_list statement_list RBRACE'''
-    p[0] = {"code" : "{\n...\n}"}
-    pass
-
-def p_declaration_1(p):
-    '''declaration : type_name declarator_list SEMI'''
-    p[0] = {"code" : ""}
-    pass
-
-def p_declaration_2(p):
-    '''declaration : EXTERN type_name declarator_list SEMI'''
-    p[0] = {"code" : "declare @..."}
+def p_arguments_declaration_2(p):
+    '''arguments_declaration : LPAREN RPAREN'''
+    p[0] = {"type" : [],
+            "code" : ""}
     pass
 
 def p_parameter_list_1(p):
     '''parameter_list : parameter_declaration'''
-    p[0] = {"type" : p[1]["type"],
+    p[0] = {"type" : [p[1]["type"]],
             "code" : p[1]["code"]}
     pass
 
 def p_parameter_list_2(p):
     '''parameter_list : parameter_list COMMA parameter_declaration'''
-    p[0] = {"type" : p[1]["type"] + "," + p[3]["type"],
+    p[0] = {"type" : p[1]["type"] + p[3]["type"],
             "code" : p[1]["code"] + ", " + p[3]["code"]}
     pass
 
 def p_parameter_declaration(p):
-    '''parameter_declaration : type_name declarator'''
+    '''parameter_declaration : type_name ID'''
+    if currentContext.exists(p[2]):
+        sys.stderr.write("*WARNING* (l." + str(p.lineno(2)) + "): You are redefining '" + p[2] + "'\n")
+    currentContext.setType(p[2], p[1]["type"]) #TODO : function type
     p[0] = {"type" : p[1]["type"],
-            "code" : p[1]["code"] + " %" + p[2]["name"]}
+            "code" : p[1]["code"] + " %" + p[2]}
     pass
+
+def p_type_name_1(p):
+    '''type_name : VOID'''
+    p[0] = {"type" : ["v", "void"],
+            "code" : "void"}
+    pass
+
+def p_type_name_2(p):
+    '''type_name : CHAR'''
+    p[0] = {"type" : ["v", "i8"],
+            "code" : "i8"}
+    pass
+
+def p_type_name_3(p):
+    '''type_name : INT'''
+    p[0] = {"type" : ["v", "i32"],
+            "code" : "i32"}
+    pass
+
+def p_type_name_4(p):
+    '''type_name : FLOAT'''
+    p[0] = {"type" : ["v", "float"],
+            "code" : "float"}
+    pass
+
+def p_type_name_5(p):
+    '''type_name : type_name LBRACKET RBRACKET
+                 | type_name LBRACKET ICONST RBRACKET'''
+    p[0] = {"type" : ["a", p[1]["type"]],
+            "code" : p[1]["code"] + "[]"}
+    pass
+
+def p_type_name_6(p):
+    '''type_name : type_name LPAREN TIMES RPAREN LPAREN type_list RPAREN''' # int(*)(int,char)
+    p[0] = {"type" : ["f", [p[1]["type"]]+p[6]["type"] ],
+            "code" : "function_type1"}
+    pass
+
+def p_type_name_7(p):
+    '''type_name : type_name LPAREN TIMES RPAREN LPAREN RPAREN''' # int(*)()
+    p[0] = {"type" : ["f", [p[1]["type"]] ],
+            "code" : "function_type2"}
+    pass
+
+def p_type_list_1(p):
+    '''type_list : type_name'''
+    p[0] = {"type" : [p[1]["type"]],
+            "code" : p[1]["code"]}
+    pass
+
+def p_type_list_2(p):
+    '''type_list : type_list COMMA type_name'''
+    p[0] = {"type" : p[1]["type"] + [p[3]["type"]],
+            "code" : p[1]["code"] + ", " + p[3]["code"]}
+    pass
+
+def p_compound_statement_1(p):
+    '''compound_statement : LBRACE RBRACE'''
+    print currentContext.id_type
+    p[0] = {"code" : "{}"}
+    pass
+
+def p_compound_statement_2(p):
+    '''compound_statement : LBRACE statement_list RBRACE'''
+    print currentContext.id_type
+    p[0] = {"code" : "{\n" + p[2]["code"] + "}"}
+    pass
+
+
+def p_declaration_1(p):
+    '''declaration_statement : type_name declarator_list SEMI'''
+    p[0] = {"code" : ""}
+    pass
+
+def p_declaration_2(p):
+    '''declaration_statement : EXTERN type_name declarator_list SEMI'''
+    p[0] = {"code" : "declare @..."}
+    pass
+
+def p_declarator(p):
+    '''declarator : ID
+                  | ID EQUALS primary_expression'''
+    p[0] = {"name" : p[0],
+            "code" : p[0]}
+    pass
+
 
 # ---------------- trié jusque là
 
@@ -501,17 +513,19 @@ def p_statement(p):
                  | expression_statement
                  | selection_statement
                  | iteration_statement
-                 | jump_statement'''
+                 | jump_statement
+                 | declaration_statement'''
+    p[0] = {"code" : "line"}
     pass
 
-def p_declaration_list(p):
-    '''declaration_list : declaration
-                        | declaration_list declaration'''
+def p_statement_list_1(p):
+    '''statement_list : statement'''
+    p[0] = {"code" : p[1]["code"] + "\n"}
     pass
 
-def p_statement_list(p):
-    '''statement_list : statement
-                      | statement_list statement'''
+def p_statement_list_2(p):
+    '''statement_list : statement_list statement'''
+    p[0] = {"code" : p[1]["code"] + p[2]["code"] + "\n"}
     pass
 
 def p_expression_statement(p):
