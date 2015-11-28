@@ -11,15 +11,15 @@
 
 
 
-# check python version
-import sys
-if sys.version_info[0] < 3:
-    sys.stderr.write("*** Please, use at least python 3 ***\n")
-    exit()
-
-# change directory for generated files
-import os
-os.chdir("build")
+## check python version
+#import sys
+#if sys.version_info[0] < 3:
+#    sys.stderr.write("*** Please, use at least python 3 ***\n")
+#    #exit()
+#
+## change directory for generated files
+#import os
+##os.chdir("build")
 
 
 
@@ -157,7 +157,7 @@ def t_error(t):
 
 # build the lexer
 from ply import lex as lex
-lex.lex()
+lex.lex(outputdir="build")
 
 
 
@@ -562,7 +562,7 @@ def p_error(p):
 
 # build parser
 from ply import yacc as yacc
-yacc.yacc()
+yacc.yacc(outputdir="build")
 
 
 
@@ -570,7 +570,7 @@ yacc.yacc()
 
 if __name__ == "__main__":
     import sys
-    f = open("../" + sys.argv[1])
+    f = open(sys.argv[1])
     prog = f.read()
     f.close()
     result = yacc.parse(prog)
