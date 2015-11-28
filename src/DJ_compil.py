@@ -13,8 +13,10 @@
 
 # check python version
 import sys
-if sys.version_info[0] >= 3:
-    raw_input = input
+if sys.version_info[0] < 3:
+    sys.stderr.write("*** Please, use at least python 3 ***\n")
+    exit()
+
 # change directory for generated files
 import os
 os.chdir("build")
@@ -154,7 +156,7 @@ def t_error(t):
 
 
 # build the lexer
-from ply import lex
+from ply import lex as lex
 lex.lex()
 
 
@@ -373,13 +375,13 @@ def p_type_list_2(p):
 
 def p_compound_statement_1(p):
     '''compound_statement : LBRACE RBRACE'''
-    print currentContext.id_type
+    print(currentContext.id_type)
     p[0] = {"code" : "{}"}
     pass
 
 def p_compound_statement_2(p):
     '''compound_statement : LBRACE statement_list RBRACE'''
-    print currentContext.id_type
+    print(currentContext.id_type)
     p[0] = {"code" : "{\n" + p[2]["code"] + "}"}
     pass
 
@@ -559,7 +561,7 @@ def p_error(p):
 
 
 # build parser
-from ply import yacc
+from ply import yacc as yacc
 yacc.yacc()
 
 
@@ -568,7 +570,9 @@ yacc.yacc()
 
 if __name__ == "__main__":
     import sys
-    prog = file("../" + sys.argv[1]).read()
+    f = open("../" + sys.argv[1])
+    prog = f.read()
+    f.close()
     result = yacc.parse(prog)
     checkGenericErrors(result)
-    print result["code"]
+    print(result["code"])
