@@ -23,7 +23,7 @@ tst_unit:
 $(LL_DIR)/%.ll: $(C_DIR)/%.c $(PARSER)
 	mkdir -p $(dir $@)
 	cd $(BUILD_DIR)
-	python $(PARSER) $<
+	python3 $(PARSER) $<
 
 mrproper:
 	rm -rf $(BUILD_DIR)
