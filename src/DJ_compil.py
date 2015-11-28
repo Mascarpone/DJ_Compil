@@ -154,7 +154,7 @@ def t_error(t):
 
 
 # build the lexer
-import ply.lex as lex
+from ply import lex
 lex.lex()
 
 
@@ -559,7 +559,7 @@ def p_error(p):
 
 
 # build parser
-import ply.yacc as yacc
+from ply import yacc
 yacc.yacc()
 
 
