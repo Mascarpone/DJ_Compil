@@ -11,15 +11,15 @@
 
 
 
-# check python version
-import sys
-if sys.version_info[0] < 3:
-    sys.stderr.write("*** Please, use at least python 3 ***\n")
-    exit()
-
-# change directory for generated files
-import os
-#os.chdir("build")
+## check python version
+#import sys
+#if sys.version_info[0] < 3:
+#    sys.stderr.write("*** Please, use at least python 3 ***\n")
+#    #exit()
+#
+## change directory for generated files
+#import os
+##os.chdir("build")
 
 
 
