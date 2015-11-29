@@ -274,15 +274,21 @@ def p_external_declaration_2(p):
     pass
 
 def p_function_definition(p):
-    '''function_definition : type_name ID arguments_declaration compound_statement'''
-    if currentContext.exists(p[2]):
-        sys.stderr.write("*WARNING* (l." + str(p.lineno(2)) + "): You are redefining '"+p[2]+"'\n")
-    elif p[2] in reserved:
-        sys.stderr.write("*ERROR* (l." + str(p.lineno(2)) + "): '" + p[2] + "' is a reseved keyword\n")
+    '''function_definition : type_name function_declarator arguments_declaration compound_statement'''
+    if currentContext.exists(p[2]["name"]):
+        sys.stderr.write("*WARNING* (l." + str(p.lineno(2)) + "): You are redefining '"+p[2]["name"]+"'\n")
+    elif p[2]["name"] in reserved:
+        sys.stderr.write("*ERROR* (l." + str(p.lineno(2)) + "): '" + p[2]["name"] + "' is a reseved keyword\n")
         raise SyntaxError
-    #closeCurrentContext() # uncomment when the opening is coded during arguments parsing
-    currentContext.setType(p[2], ["f", [p[1]["type"]]+p[3]["type"]])
-    p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2] + "(" + p[3]["code"] + ")" + p[4]["code"]}
+    closeCurrentContext()
+    currentContext.setType(p[2]["name"], ["f", [p[1]["type"]]+p[3]["type"]])
+    p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2]["name"] + "(" + p[3]["code"] + ")" + p[4]["code"]}
+    pass
+
+def p_function_declarator(p):
+    '''function_declarator : ID'''
+    enterNewContext()
+    p[0] = {"name" : p[1]}
     pass
 
 def p_arguments_declaration_1(p):
@@ -375,13 +381,11 @@ def p_type_list_2(p):
 
 def p_compound_statement_1(p):
     '''compound_statement : LBRACE RBRACE'''
-    print(currentContext.id_type)
     p[0] = {"code" : "{}"}
     pass
 
 def p_compound_statement_2(p):
     '''compound_statement : LBRACE statement_list RBRACE'''
-    print(currentContext.id_type)
     p[0] = {"code" : "{\n" + p[2]["code"] + "}"}
     pass
 
@@ -464,20 +468,23 @@ def p_unary_expression(p):
     pass
 
 def p_unary_operator(p):
-    '''unary_operator : MINUS'''
+    '''unary_operator : MINUS
+                      | LNOT'''
     pass
 
 def p_multiplicative_expression(p):
     '''multiplicative_expression : unary_expression
                                   | multiplicative_expression TIMES unary_expression
                                   | multiplicative_expression DIVIDE unary_expression
-                                  | multiplicative_expression MOD unary_expression'''
+                                  | multiplicative_expression MOD unary_expression
+                                  | multiplicative_expression LAND unary_expression'''
     pass
 
 def p_additive_expression(p):
     '''additive_expression : multiplicative_expression
                            | additive_expression PLUS multiplicative_expression
-                           | additive_expression MINUS multiplicative_expression'''
+                           | additive_expression MINUS multiplicative_expression
+                           | additive_expression LOR multiplicative_expression'''
     pass
 
 def p_comparison_expression(p):
@@ -575,4 +582,5 @@ if __name__ == "__main__":
     f.close()
     result = yacc.parse(prog)
     checkGenericErrors(result)
+    print("\n        ===== CODE =====\n")
     print(result["code"])
