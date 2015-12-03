@@ -172,11 +172,14 @@ class Context:
     prev = None
     # the dictionary associating each id to its type
     id_type = {}
+    # dictionary for adresses of allocated IDs
+    addr = {}
 
     def __init__(self, c = None):
         '''Creates a new context, with c as surrounding context'''
         self.prev = c
         self.id_type = {}
+        self.addr = {}
 
     def getParent(self):
         '''returns the surrounding context'''
@@ -207,6 +210,20 @@ class Context:
     def setType(self, id, t):
         '''sets the type of id in current context to t'''
         self.id_type[id] = t
+
+    def getAddr(self, id):
+        '''returns the string corresponding to the register in which this adress returned for this id by alloca is stored'''
+        if id in self.addr:
+            return self.addr[id]
+        elif self.prev is None:
+            return None
+        else:
+            return self.prev.getAddr(id)
+
+    def setAddr(self, id, a):
+        '''sets the register in which id is allocated to a'''
+        self.addr[id] = a
+
 
 # Types checking
 def getType(t1, t2, l):
@@ -296,7 +313,7 @@ def p_external_declaration_1(p):
 
 def p_external_declaration_2(p):
     '''external_declaration : declaration_statement'''
-    p[0] = {"code" : "external ..."} #TODO it
+    p[0] = {"code" : p[1]["code"]} #TODO it
     pass
 
 def p_function_definition(p):
@@ -418,7 +435,18 @@ def p_compound_statement_2(p):
 
 def p_declaration_1(p):
     '''declaration_statement : type_name declarator_list SEMI'''
-    p[0] = {"code" : "declaration_statement\n"}
+    code = ""
+    for d in p[2]: # is a declarator
+        if currentContext.exists(d["name"]):
+            sys.stderr.write("*WARNING* (l"+str(p.lineno(2))+") : You are redefining " + d["name"]);
+        if not d["code"] is None:
+            code += d["code"]
+        reg = "%reg"
+        code += reg + " = alloca " + p[1]["code"] + "\n"
+        code += "store " + p[1]["code"] + ", " + p[1]["code"] + "* "
+        if not d["code"] is None:
+            code += d["reg"]
+    p[0] = {"code" : code}
     pass
 
 def p_declaration_2(p):
@@ -426,11 +454,18 @@ def p_declaration_2(p):
     p[0] = {"code" : "declare @..."}
     pass
 
-def p_declarator(p):
-    '''declarator : ID
-                  | ID EQUALS primary_expression'''
-    p[0] = {"name" : p[0],
-            "code" : p[0]}
+def p_declarator_1(p):
+    '''declarator : ID'''
+    p[0] = {"name" : p[1],
+            "reg" : "%reg",
+            "code" : None}
+    pass
+
+def p_declarator_2(p):
+    '''declarator : ID EQUALS primary_expression'''
+    p[0] = {"name" : p[1],
+            "reg" : p[3]["reg"],
+            "code" : p[3]["code"]}
     pass
 
 
@@ -970,10 +1005,14 @@ def p_expression_7(p):
             "type" : p[1]["type"]}
     pass
 
+def p_declarator_list_1(p):
+    '''declarator_list : declarator'''
+    p[0] = [p[1]]
+    pass
 
-def p_declarator_list(p):
-    '''declarator_list : declarator
-                       | declarator_list COMMA declarator'''
+def p_declarator_list_2(p):
+    '''declarator_list : declarator_list COMMA declarator'''
+    p[0] = p[1] + [p[2]]
     pass
 
 
