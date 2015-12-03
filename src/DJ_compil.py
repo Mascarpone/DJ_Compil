@@ -172,11 +172,14 @@ class Context:
     prev = None
     # the dictionary associating each id to its type
     id_type = {}
+    # dictionary for adresses of allocated IDs
+    addr = {}
 
     def __init__(self, c = None):
         '''Creates a new context, with c as surrounding context'''
         self.prev = c
         self.id_type = {}
+        self.addr = {}
 
     def getParent(self):
         '''returns the surrounding context'''
@@ -207,6 +210,20 @@ class Context:
     def setType(self, id, t):
         '''sets the type of id in current context to t'''
         self.id_type[id] = t
+
+    def getAddr(self, id):
+        '''returns the string corresponding to the register in which this adress returned for this id by alloca is stored'''
+        if id in self.addr:
+            return self.addr[id]
+        elif self.prev is None:
+            return None
+        else:
+            return self.prev.getAddr(id)
+
+    def setAddr(self, id, a):
+        '''sets the register in which id is allocated to a'''
+        self.addr[id] = a
+
 
 # Types checking
 def getType(t1, t2, l):
