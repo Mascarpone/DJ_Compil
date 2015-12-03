@@ -2,6 +2,7 @@
 #
 # See DJ_compil.py for full description
 
+import sys
 
 # ids and their corresponding types
 class Context:

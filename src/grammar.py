@@ -158,12 +158,12 @@ def p_declaration_1(p):
             sys.stderr.write("*WARNING* (l"+str(p.lineno(2))+") : You are redefining " + d["name"]);
         if not d["code"] is None:
             code += d["code"]
-        reg = "%reg"
+        reg = newReg()
         code += reg + " = alloca " + p[1]["code"] + "\n"
         code += "store " + p[1]["code"] + ", " + p[1]["code"] + "* "
         if not d["code"] is None:
             code += d["reg"]
-    p[0] = {"code" : code}
+    p[0] = {"code" : code, "reg" : reg, "type" : p[1]["type"]}
     pass
 
 def p_declaration_2(p):
@@ -192,14 +192,29 @@ def p_declarator_2(p):
 
 def p_primary_expression_id(p):
     '''primary_expression : ID'''
-    p[0] = {"type" : ["v", "i32"],
-            "code" : "primary_expression_id",
-            "reg" : "registre"}
+    r = newReg()
+
+    if not currentContext.exists(p[1]):
+        sys.stderr.write("*WARNING* (l." + str(p.lineno(0)) + "): The expression '" + p[1] + "' is not defined\n")
+        reg = newReg()
+        type = ["v", None]
+        code = "primary_expression_id"
+    else:
+        reg = currentContext.getAddr(p[1]["name"])
+        type = currentContext.getType(p[1]["name"])
+        code = r + " = load " + type[1] + ", " + type[1] + "* " + reg
+
+    p[0] = {"name" : p[1],
+            "type" : type,
+            "code" : code,
+            "reg" : r}
     pass
 
 def p_primary_expression_iconst(p):
     '''primary_expression : ICONST'''
-    p[0] = {"type" : ["v", "i32"], "code" : "primary_expression_iconst", "reg" : "registre"}
+    p[0] = {"type" : ["v", "i32"],
+            "code" : "primary_expression_iconst",
+            "reg" : None}
     pass
 
 def p_primary_expression_fconst(p):
