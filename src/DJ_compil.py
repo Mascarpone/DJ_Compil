@@ -225,6 +225,7 @@ class Context:
         self.addr[id] = a
 
 
+
 # Types checking
 def getType(t1, t2, l):
     '''returns the type of the return value of a two-variable operation (*, +, /, -)
