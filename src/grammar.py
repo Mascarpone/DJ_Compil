@@ -198,29 +198,23 @@ def p_primary_expression_id(p):
     if not cc.exists(p[1]):
         print(cc.id_type)
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
-        #r = newReg()
-        #t = ["v", None]
-        #code = "primary_expression_id"
-    reg = newReg()
-    r = "%addr"#cc.getAddr(p[1])
+    r = cc.getAddr(p[1])
     t = cc.getType(p[1])
-    code = ""
     if t[0] == "v":
-        code = reg + " = load " + t[1] + ", " + t[1] + "* " + r
+        pass
     else: # function, array
         pass
 
-    p[0] = {#"name" : p[1],
-            "type" : t,
-            "code" : code,
-            "reg" : reg}
+    p[0] = {"type" : t,
+            "code" : "",
+            "reg" : r}
     pass
 
 def p_primary_expression_iconst(p):
     '''primary_expression : ICONST'''
     p[0] = {"type" : ["v", "i32"],
-            "code" : "primary_expression_iconst",
-            "reg" : None}
+            "code" : "",
+            "reg" : p[1]}
     pass
 
 def p_primary_expression_fconst(p):
@@ -300,7 +294,7 @@ def p_unary_expression_2(p):
     r2 = newReg()
     p[0] = {"type" : p[2]["type"],
             "reg" : p[2]["reg"],
-            "code" :   p[2]["code"] + "\n"
+            "code" :   p[2]["code"]
                      + r1 + " = load " + p[2]["type"][1] + ", " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
                      + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", 1 \n"
                      + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
@@ -317,7 +311,7 @@ def p_unary_expression_3(p):
     r2 = newReg()
     p[0] = {"type" : p[2]["type"],
             "reg" : p[2]["reg"],
-            "code" :   p[2]["code"] + "\n"
+            "code" :   p[2]["code"]
                      + r1 + " = load " + p[2]["type"][1] + ", " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
                      + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", 1 \n"
                      + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
@@ -334,7 +328,7 @@ def p_unary_expression_4(p):
     r2 = newReg()
     p[0] = {"type" : p[2]["type"],
             "reg" : p[2]["reg"],
-            "code" :   p[2]["code"] + "\n"
+            "code" :   p[2]["code"]
                      + r1 + " = load " + p[2]["type"][1] + ", " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
                      + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", -1 \n"
                      + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
@@ -347,7 +341,7 @@ def p_unary_expression_5(p):
     r3 = newReg()
     p[0] = {"type" : ["v", "i32"],
             "reg" : r3,
-            "code" :   p[2]["code"] + "\n"
+            "code" :   p[2]["code"]
                      + r1 + " = load " + p[2]["type"][1] + ", " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
                      + r2 + " = icmp eq " + p[2]["type"][1] + " " + r1 + ", 0 \n"
                      + r3 + " = zext i1 " + r2 + " to i32"
@@ -374,7 +368,7 @@ def p_multiplicative_expression_2(p):
         op = "fmul"
 
     p[0] = {"reg" : r4,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[3]["type"][1] + ", " + p[3]["type"][1] + "* " + p[3]["reg"] + "\n"
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + r1 + " to " + t[1] + "\n"
@@ -395,7 +389,7 @@ def p_multiplicative_expression_3(p):
         op = "fdiv"
 
     p[0] = {"reg" : r4,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[3]["type"][1] + ", " + p[3]["type"][1] + "* " + p[3]["reg"] + "\n"
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + r1 + " to " + t[1] + "\n"
@@ -416,7 +410,7 @@ def p_multiplicative_expression_4(p):
         op = "frem"
 
     p[0] = {"reg" : r4,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[3]["type"][1] + ", " + p[3]["type"][1] + "* " + p[3]["reg"] + "\n"
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + r1 + " to " + t[1] + "\n"
@@ -439,7 +433,7 @@ def p_multiplicative_expression_5(p):
         op = "fmul"
 
     p[0] = {"reg" : r6,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[3]["type"][1] + ", " + p[3]["type"][1] + "* " + p[3]["reg"] + "\n"
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + r1 + " to " + t[1] + "\n"
@@ -468,7 +462,7 @@ def p_additive_expression_2(p):
         op = "fadd"
 
     p[0] = {"reg" : r1,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                    + r1 + " = " + op + " " + t[1] + " " + r2 + ", " + r3,
@@ -487,7 +481,7 @@ def p_additive_expression_3(p):
         op = "fsub"
 
     p[0] = {"reg" : r1,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                    + r1 + " = " + op + " " + t[1] + " " + r2 + ", " + r3,
@@ -508,7 +502,7 @@ def p_additive_expression_4(p):
         op = "fadd"
 
     p[0] = {"reg" : r1,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                    + r3 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                    + r1 + " = " + op + " " + t[1] + " " + r2 + ", " + r3 + "\n"
@@ -532,7 +526,7 @@ def p_comparison_expression_2(p):
     r3 = newReg()
     r4 = newReg()
     p[0] = {"reg" : r3,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                      + r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                      + r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                      + r3 + " = icmp slt " + t[1] + " " + r1 + ", " + r2 + "\n"
@@ -548,7 +542,7 @@ def p_comparison_expression_3(p):
     r3 = newReg()
     r4 = newReg()
     p[0] = {"reg" : r3,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                      + r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                      + r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                      + r3 + " = icmp sgt " + t[1] + " " + r1 + ", " + r2 + "\n"
@@ -564,7 +558,7 @@ def p_comparison_expression_4(p):
     r3 = newReg()
     r4 = newReg()
     p[0] = {"reg" : r3,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                      + r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                      + r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                      + r3 + " = icmp sle " + t[1] + " " + r1 + ", " + r2 + "\n"
@@ -580,7 +574,7 @@ def p_comparison_expression_5(p):
     r3 = newReg()
     r4 = newReg()
     p[0] = {"reg" : r3,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                      + r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                      + r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                      + r3 + " = icmp sge " + t[1] + " " + r1 + ", " + r2 + "\n"
@@ -596,7 +590,7 @@ def p_comparison_expression_6(p):
     r3 = newReg()
     r4 = newReg()
     p[0] = {"reg" : r3,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                      + r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                      + r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                      + r3 + " = icmp eq " + t[1] + " " + r1 + ", " + r2 + "\n"
@@ -612,7 +606,7 @@ def p_comparison_expression_7(p):
     r3 = newReg()
     r4 = newReg()
     p[0] = {"reg" : r3,
-            "code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+            "code" : p[1]["code"] + p[3]["code"]
                      + r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
                      + r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
                      + r3 + " = icmp ne " + t[1] + " " + r1 + ", " + r2 + "\n"
@@ -624,7 +618,7 @@ def p_expression_1(p):
     '''expression : unary_expression EQUALS comparison_expression'''
     if p[1]["type"] != p[3]["type"]:
         error(p.lineno(0), "Incompatible types in operation")
-    p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+    p[0] = {"code" : p[1]["code"] + p[3]["code"]
                    + "store " + p[3]["type"][1] + " " + p[3]["reg"] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
             "reg" : p[1]["reg"],
             "type" : p[1]["type"]}
@@ -643,7 +637,7 @@ def p_expression_2(p):
 
     r1 = newReg()
     r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+    p[0] = {"code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[1]["type"][1] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n"
                    + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
                    + "store " + p[1]["type"][1] + " " + r + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
@@ -663,7 +657,7 @@ def p_expression_3(p):
 
     r1 = newReg()
     r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+    p[0] = {"code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[1]["type"][1] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n"
                    + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
                    + "store " + p[1]["type"][1] + " " + r + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
@@ -683,7 +677,7 @@ def p_expression_4(p):
 
     r1 = newReg()
     r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+    p[0] = {"code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[1]["type"][1] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n"
                    + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
                    + "store " + p[1]["type"][1] + " " + r + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
@@ -703,7 +697,7 @@ def p_expression_5(p):
 
     r1 = newReg()
     r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+    p[0] = {"code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[1]["type"][1] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n"
                    + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
                    + "store " + p[1]["type"][1] + " " + r + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
@@ -723,7 +717,7 @@ def p_expression_6(p):
 
     r1 = newReg()
     r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
+    p[0] = {"code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[1]["type"][1] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n"
                    + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
                    + "store " + p[1]["type"][1] + " " + r + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
@@ -733,7 +727,7 @@ def p_expression_6(p):
 
 def p_expression_7(p):
     '''expression : comparison_expression'''
-    p[0] = {"code" : p[1]["code"] + "\n",
+    p[0] = {"code" : p[1]["code"],
             "reg" : p[1]["reg"],
             "type" : p[1]["type"]}
     pass
@@ -805,14 +799,14 @@ def p_selection_statement_3(p):
                      + p[3]["code"]
                      + "br label %" + loop_head + "\n"
                      + "\n" + loop_head + ": \n"
-                     + p[4]["code"]
+                     + p[4]["code"] + "\n"
                      + r + " = icmp eq " + p[4]["type"][1] + " " + p[4]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_body + ": \n"
-                     + p[7]["code"]
+                     + p[7]["code"] + "\n"
                      + "br label %" + loop_close + "\n"
                      + "\n" + loop_close + ": \n"
-                     + p[5]["code"]
+                     + p[5]["code"] + "\n"
                      + "br label %" + loop_head + "\n"
                      + "\n" + loop_exit + " : \n",
             "type" : ["v", None],
