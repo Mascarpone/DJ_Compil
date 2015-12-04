@@ -17,6 +17,7 @@ from tools import *
 import scanner
 import grammar
 from ply import yacc as yacc
+from grammar import cc
 
 #if __name__ == "__main__":
 # read source file
@@ -28,8 +29,11 @@ f.close()
 result = yacc.parse(prog)
 
 # check errors
-checkGenericErrors(result)
+checkGenericErrors(cc, result)
 
 # save result
-print("\n        ===== CODE =====\n")
-print(result["code"])
+if result is None:
+    print("Code production canceled")
+else:
+    print("\n        ===== CODE =====\n")
+    print(result["code"])
