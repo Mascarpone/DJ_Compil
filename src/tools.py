@@ -64,6 +64,28 @@ class Context:
         '''sets the register in which id is allocated to a'''
         self.addr[id] = a
 
+    def new(self):
+        '''Sets current context as a new context with the previous surrounding context as parent.
+        e.g. when entering a { ... } block'''
+        nc = Context()
+        nc.prev = self.prev
+        nc.id_type = self.id_type
+        nc.addr = self.addr
+        self.prev = nc
+        self.id_type = {}
+        self.addr = {}
+
+
+    def close(self):
+        '''Set current context back to its parent'''
+        if self.isGlobal():
+            # is there a best way to raise an error ?
+            sys.stderr.write("*ERROR*: trying to close global context\n")
+        else:
+            self.id_type = self.prev.id_type
+            self.addr = self.prev.addr
+            self.prev = self.prev.prev
+
 
 
 # Types checking
@@ -106,28 +128,24 @@ def newReg():
 #   - if it's a function, the type is a function with first element as return type, and others elements as arguments.
 
 
-# now, we can use this awsome context class
-currentContext = Context()
-def enterNewContext():
-    '''Sets current context as a new context with the previous surrounding context as parent.
-    e.g. when entering a { ... } block'''
-    global currentContext
-    nc = Context(currentContext)
-    currentContext = nc
 
-def closeCurrentContext():
-    '''Set current context back to its parent'''
-    global currentContext
-    if currentContext.isGlobal():
-        # is there a best way to raise an error ?
-        sys.stderr.write("*ERROR*: trying to close global context")
-    else:
-        currentContext = currentContext.getParent()
+def warning(lineno, msg):
+    sys.stderr.write("*WARNING* (l." + str(lineno) + "): " + msg + "\n")
+
+
+def error(lineno, msg):
+    #global produce_code
+    #produce_code = False
+    sys.stderr.write("*ERROR* (l." + str(lineno) + "): " + msg + "\n")
+    raise SyntaxError
 
 
 
-def checkGenericErrors(result):
+
+def checkGenericErrors(cc, result):
     '''Check result to throw errors/warnings at the end of the compilation'''
     # look for main
-    if not currentContext.exists("main"):
+    if result is None:
+        return
+    if not cc.exists("main"):
         sys.stderr.write("*WARNING* this program doesn't have a main() function\n")
