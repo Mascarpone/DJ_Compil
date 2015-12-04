@@ -10,12 +10,15 @@ from scanner import tokens, reserved
 #tokens = scanner.tokens
 from ply import yacc as yacc
 
+# var table
+cc = Context()
+
 
 # first rule because it's the starting symbol
 def p_program_1(p):
     '''program : program external_declaration'''
     p[0] = {"code" : p[1]["code"] + "\n" + p[2]["code"] + "\n"}
-    #print currentContext.id_type
+    #print cc.id_type
 
 
 def p_program_2(p):
@@ -35,19 +38,18 @@ def p_external_declaration_2(p):
 
 def p_function_definition(p):
     '''function_definition : type_name function_declarator arguments_declaration compound_statement'''
-    if currentContext.exists(p[2]["name"]):
-        sys.stderr.write("*WARNING* (l." + str(p.lineno(2)) + "): You are redefining '"+p[2]["name"]+"'\n")
+    if cc.exists(p[2]["name"]):
+        warning(p.lineno(2), "You are redefining '"+p[2]["name"]+"'")
     elif p[2]["name"] in reserved:
-        sys.stderr.write("*ERROR* (l." + str(p.lineno(2)) + "): '" + p[2]["name"] + "' is a reseved keyword\n")
-        raise SyntaxError
-    closeCurrentContext()
-    currentContext.setType(p[2]["name"], ["f", [p[1]["type"]]+p[3]["type"]])
+        error(p.lineno(2), "'"+p[2]["name"]+"' is a reseved keyword")
+    cc.close()
+    cc.setType(p[2]["name"], ["f", [p[1]["type"]]+p[3]["type"]])
     p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2]["name"] + "(" + p[3]["code"] + ") {\n" + p[4]["code"] + "\n}\n"}
     pass
 
 def p_function_declarator(p):
     '''function_declarator : ID'''
-    enterNewContext()
+    cc.new()
     p[0] = {"name" : p[1]}
     pass
 
@@ -77,9 +79,9 @@ def p_parameter_list_2(p):
 
 def p_parameter_declaration(p):
     '''parameter_declaration : type_name ID'''
-    if currentContext.exists(p[2]):
-        sys.stderr.write("*WARNING* (l." + str(p.lineno(2)) + "): You are redefining '" + p[2] + "'\n")
-    currentContext.setType(p[2], p[1]["type"]) #TODO : function type
+    if cc.exists(p[2]):
+        warning(p.lineno(2), "You are redefining '" + p[2] + "'")
+    cc.setType(p[2], p[1]["type"]) #TODO : function type
     p[0] = {"type" : p[1]["type"],
             "code" : p[1]["code"] + " %" + p[2]}
     pass
@@ -154,16 +156,17 @@ def p_declaration_1(p):
     '''declaration_statement : type_name declarator_list SEMI'''
     code = ""
     for d in p[2]: # is a declarator
-        if currentContext.exists(d["name"]):
-            sys.stderr.write("*WARNING* (l"+str(p.lineno(2))+") : You are redefining " + d["name"]);
-        if not d["code"] is None:
-            code += d["code"]
+        if cc.exists(d["name"]):
+            warning(p.lineno(2), "You are redefining " + d["name"]);
         reg = newReg()
         code += reg + " = alloca " + p[1]["code"] + "\n"
-        code += "store " + p[1]["code"] + ", " + p[1]["code"] + "* "
+        cc.setType(d["name"], p[1]["type"])
+        cc.setAddr(d["name"], reg)
         if not d["code"] is None:
-            code += d["reg"]
-    p[0] = {"code" : code, "reg" : reg, "type" : p[1]["type"]}
+            code += d["code"]
+            code += "store " + p[1]["code"] + " " + d["reg"] + ", " + p[1]["code"] + "* " + reg + "\n"
+    p[0] = {"code" : code,
+            "type" : p[1]["type"]}
     pass
 
 def p_declaration_2(p):
@@ -192,22 +195,25 @@ def p_declarator_2(p):
 
 def p_primary_expression_id(p):
     '''primary_expression : ID'''
-    r = newReg()
+    if not cc.exists(p[1]):
+        print(cc.id_type)
+        error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
+        #r = newReg()
+        #t = ["v", None]
+        #code = "primary_expression_id"
+    reg = newReg()
+    r = "%addr"#cc.getAddr(p[1])
+    t = cc.getType(p[1])
+    code = ""
+    if t[0] == "v":
+        code = reg + " = load " + t[1] + ", " + t[1] + "* " + r
+    else: # function, array
+        pass
 
-    if not currentContext.exists(p[1]):
-        sys.stderr.write("*WARNING* (l." + str(p.lineno(0)) + "): The expression '" + p[1] + "' is not defined\n")
-        reg = newReg()
-        type = ["v", None]
-        code = "primary_expression_id"
-    else:
-        reg = currentContext.getAddr(p[1]["name"])
-        type = currentContext.getType(p[1]["name"])
-        code = r + " = load " + type[1] + ", " + type[1] + "* " + reg
-
-    p[0] = {"name" : p[1],
-            "type" : type,
+    p[0] = {#"name" : p[1],
+            "type" : t,
             "code" : code,
-            "reg" : r}
+            "reg" : reg}
     pass
 
 def p_primary_expression_iconst(p):
@@ -617,8 +623,7 @@ def p_comparison_expression_7(p):
 def p_expression_1(p):
     '''expression : unary_expression EQUALS comparison_expression'''
     if p[1]["type"] != p[3]["type"]:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(p.lineno(0)) + "\n")
-        raise SyntaxError
+        error(p.lineno(0), "Incompatible types in operation")
     p[0] = {"code" : p[1]["code"] + "\n" + p[3]["code"] + "\n"
                    + "store " + p[3]["type"][1] + " " + p[3]["reg"] + ", " + p[1]["type"][1] + "* " + p[1]["reg"] + "\n",
             "reg" : p[1]["reg"],
@@ -629,7 +634,7 @@ def p_expression_2(p):
     '''expression : unary_expression TIMESEQUAL comparison_expression'''
     t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
     if p[1]["type"] != t:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(p.lineno(0)) + "\n")
+        error(p.lineno(0), "Incompatible types in operation")
         raise SyntaxError
     if t[1] == "i32" or t[1] == "i8":
         op = "mul"
@@ -650,8 +655,7 @@ def p_expression_3(p):
     '''expression : unary_expression DIVEQUAL comparison_expression'''
     t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
     if p[1]["type"] != t:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(p.lineno(0)) + "\n")
-        raise SyntaxError
+        error(p.lineno(0), "Incompatible types in operation")
     if t[1] == "i32" or t[1] == "i8":
         op = "sdiv"
     elif t[1] == "float":
@@ -671,8 +675,7 @@ def p_expression_4(p):
     '''expression : unary_expression MODEQUAL comparison_expression'''
     t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
     if p[1]["type"] != t:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(p.lineno(0)) + "\n")
-        raise SyntaxError
+        error(p.lineno(0), "Incompatible types in operation")
     if t[1] == "i32" or t[1] == "i8":
         op = "srem"
     elif t[1] == "float":
@@ -692,8 +695,7 @@ def p_expression_5(p):
     '''expression : unary_expression PLUSEQUAL comparison_expression'''
     t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
     if p[1]["type"] != t:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(p.lineno(0)) + "\n")
-        raise SyntaxError
+        error(p.lineno(0), "Incompatible types in operation")
     if t[1] == "i32" or t[1] == "i8":
         op = "add"
     elif t[1] == "float":
@@ -713,8 +715,7 @@ def p_expression_6(p):
     '''expression : unary_expression MINUSEQUAL comparison_expression'''
     t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
     if p[1]["type"] != t:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(p.lineno(0)) + "\n")
-        raise SyntaxError
+        error(p.lineno(0), "Incompatible types in operation")
     if t[1] == "i32" or t[1] == "i8":
         op = "sub"
     elif t[1] == "float":
