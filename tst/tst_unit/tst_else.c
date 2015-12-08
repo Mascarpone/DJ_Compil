@@ -15,7 +15,7 @@ int main()
 {
     int a = 1;
     if(a > 0)
-        print("+")
+        print("+");
     else if(a == 0)
         print(".");
     else
@@ -23,7 +23,7 @@ int main()
 
     a--;
     if(a > 0)
-        print("+")
+        print("+");
     else if(a == 0)
         print(".");
     else
@@ -31,7 +31,7 @@ int main()
 
     a--;
     if(a > 0)
-        print("+")
+        print("+");
     else if(a == 0)
         print(".");
     else
