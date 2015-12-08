@@ -20,6 +20,11 @@ from ply import yacc as yacc
 from grammar import cc
 
 #if __name__ == "__main__":
+
+if len(sys.argv) < 3:
+    sys.stderr.write("usage: ...\n")
+    sys.exit(1)
+
 # read source file
 f = open(sys.argv[1])
 prog = f.read()
@@ -33,7 +38,10 @@ checkGenericErrors(cc, result)
 
 # save result
 if result is None:
-    print("Code production canceled")
+    sys.stderr.write("Code production canceled\n")
 else:
     print("\n        ===== CODE =====\n")
     print(result["code"])
+    f = open(sys.argv[2], 'w')
+    f.write(result["code"])
+    f.close()

@@ -1,7 +1,7 @@
 // Exemple de boucle for traduite en llvm
 // for-sample.dj
 // =============
-//void printint(int i);
+extern void printint(int i);
 
 int main() {
    int i;
