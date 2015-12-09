@@ -58,7 +58,11 @@ def p_function_definition(p):
     cc.close()
     cc.setType(p[2]["name"], ["f", [p[1]["type"]]+p[3]["type"]])
 
-    p[0] = {"code" : "define " + p[1]["code"] + " @" + p[2]["name"] + "(" + p[3]["code"] + ") {\n" + p[4]["code"] + "\n}\n"}
+    code = "define " + p[1]["code"] + " @" + p[2]["name"] + "(" + p[3]["code"] + ") {\n"
+    code += p[3]["init"]
+    code += p[4]["code"] + "\n}\n"
+
+    p[0] = {"code" : code}
     pass
 
 def p_function_declarator(p):
@@ -69,26 +73,36 @@ def p_function_declarator(p):
 
 def p_arguments_declaration_1(p):
     '''arguments_declaration : LPAREN parameter_list RPAREN'''
+    init = ""
+    for t, n in zip(p[2]["type"], p[2]["name"]):
+        cc.setType(n, t)
+        cc.setAddr(n, "%" + n[0])
+        init += "%" + n + " = alloca " + t[1] + "\n"
+        init += "store " + t[1] + " %" + n + "arg, " + t[1] + "* %" + n + "\n"
     p[0] = {"type" : p[2]["type"],
-            "code" : p[2]["code"]}
+            "code" : p[2]["code"],
+            "init" : init}
     pass
 
 def p_arguments_declaration_2(p):
     '''arguments_declaration : LPAREN RPAREN'''
     p[0] = {"type" : [],
-            "code" : ""}
+            "code" : "",
+            "init" : ""}
     pass
 
 def p_parameter_list_1(p):
     '''parameter_list : parameter_declaration'''
     p[0] = {"type" : [p[1]["type"]],
-            "code" : p[1]["code"]}
+            "code" : p[1]["code"],
+            "name" : [p[1]["name"]]}
     pass
 
 def p_parameter_list_2(p):
     '''parameter_list : parameter_list COMMA parameter_declaration'''
-    p[0] = {"type" : p[1]["type"] + p[3]["type"],
-            "code" : p[1]["code"] + ", " + p[3]["code"]}
+    p[0] = {"type" : p[1]["type"] + [p[3]["type"]],
+            "code" : p[1]["code"] + ", " + p[3]["code"],
+            "name" : p[1]["name"] + [p[3]["name"]]}
     pass
 
 def p_parameter_declaration(p):
@@ -98,7 +112,8 @@ def p_parameter_declaration(p):
     cc.setType(p[2], p[1]["type"])
 
     p[0] = {"type" : p[1]["type"],
-            "code" : p[1]["code"] + " %" + p[2]}
+            "code" : p[1]["code"] + " %" + p[2] + "arg",
+            "name" : p[2]}
     pass
 
 def p_type_name_1(p):
@@ -279,11 +294,13 @@ def p_primary_expression_id_paren_args(p):
     else:
         r1 = newReg()
         code += r1 + " = call " + t[1][0][1] + " @" + p[1] + "("
+        args = []
         for r, ty in zip(p[3]["reg"], p[3]["type"]):
             if ty[0] == "v":
-                code += ty[1] + " " + r
+                args += [ty[1] + " " + r]
             else: #functions
-                code += ty[1][0][1] + " " + r
+                args += [ty[1][0][1] + " " + r]
+        code += ", ".join(args)
         code += ")\n"
         reg = r1
 
