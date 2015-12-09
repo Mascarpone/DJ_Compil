@@ -7,7 +7,7 @@ declare void @printchar(i8)
   i8*  ; content
 }
 
-define void @print(%chartable* %ct) { ; changer le parametre en fonction de comment sont déninis nos tableaux
+define void @print(%chartable* %ct) { 
   %i = alloca i32
   store i32 0, i32* %i
   br label %loopprint_head
@@ -23,7 +23,7 @@ loopprint_body:
   %size = getelementptr %chartable* %ct, i32 0, i32 0
   %i.val = load i32* %i
   %ct.content = getelementptr %chartable* %ct, i32 0, i32 1
-  %ct.i = getelementptr i8** %ct.content, i32 %i.val  
+  %ct.i = getelementptr i8** %ct.content, i32 %i.val
   %ct.i.valptr = load i8** %ct.i
   %ct.i.val = load i8* %ct.i.valptr
   call void @printchar(i8 %ct.i.val)

@@ -11,7 +11,8 @@
 
 int main()
 {
-    for(int i = 0; i < 12; i++) {
+    int i;
+    for(i = 0; i < 12; i++) {
         printint(i);
         print("\n");
     }

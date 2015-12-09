@@ -12,5 +12,5 @@
 int foo()
 {
     // des calculs extraordinaires ont parfois lieu ici
-    return 0;
+    return 0; 
 }

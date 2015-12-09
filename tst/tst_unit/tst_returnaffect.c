@@ -12,18 +12,19 @@
  *
  */
 
+extern void printint(int i);
+
 int main()
 {
-
     int x;
     x = 4;
 
     while ((x = x - 1)) {
         printint(x);
-        print("... ");
+        //print("... ");
     }
 
-    print("youpi !\n");
+    //print("youpi !\n");
 
     return 0;
 }
