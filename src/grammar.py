@@ -362,16 +362,16 @@ def p_multiplicative_expression_2(p):
     r2 = newReg()
     r3 = newReg()
     r4 = newReg()
+    op = ""
     if t[1] == "i32" or t[1] == "i8":
         op = "mul"
     elif t[1] == "float":
         op = "fmul"
-
     p[0] = {"reg" : r4,
             "code" : p[1]["code"] + p[3]["code"]
                    + r1 + " = load " + p[3]["type"][1] + ", " + p[3]["type"][1] + "* " + p[3]["reg"] + "\n"
                    + r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-                   + r3 + " = sext " + p[3]["type"][1] + " " + r1 + " to " + t[1] + "\n"
+                   + r3 + " = sext " + p[3]["type"][1] + " " + r1 + " to " + t[1] + "\n",
                    + r4 + " = " + op + " " + t[1] + " " + r2 + ", " + r3,
             "type" : t}
     pass
