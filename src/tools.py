@@ -4,6 +4,98 @@
 
 import sys
 
+
+class Type:
+    '''A generic class to decribe types'''
+    def isValue(self):
+        return False
+
+    def isFunction(self):
+        return False
+
+    def isArray(self):
+        return False
+
+
+class ValueType(Type):
+    '''A generic class to decribe types'''
+    def __init__(self):
+        self.t = None
+
+    def isValue(self):
+        return True
+
+    def setVoid():
+        self.t = "void"
+
+    def isVoid():
+        return self.t = "void"
+
+    def setInt(self):
+        self.t = "i32"
+
+    def isInt(self):
+        return self.t == "i32"
+
+    def setChar(self):
+        self.t = "i8"
+
+    def isChar(self):
+        return self.t == "i8"
+
+    def setFloat(self):
+        self.t = "float"
+
+    def isFloat(self):
+        return self.t == "float"
+
+    def setUndefined(self):
+        self.t = None
+
+    def isUndefined(self):
+        return self.t == None
+
+
+class FunctionType(Type):
+    '''A generic class to decribe types'''
+    def __init__(self):
+        self.r = None
+        self.a = [] # list
+
+    def isFunction(self):
+        return True
+
+    def setReturnType(t):
+        self.r = t
+
+    def getReturnType():
+        return self.r
+
+    def setArgType(i, t):
+        if i < len(self.a):
+            self.a[i] = t
+        elif i == len(self.a):
+            self.a.append(t)
+        else:
+            raise IndexError
+
+    def getArgType(i):
+        return self.a[i]
+
+
+class ArrayType(Type):
+    '''A generic class to decribe types'''
+    def isArray(self):
+        return True
+
+
+
+
+
+
+
+
+
 # ids and their corresponding types
 class Context:
     '''A class to describe ids visibility and their corresponding types'''
@@ -13,17 +105,22 @@ class Context:
     # the dictionary associating each id to its type
     id_type = {}
     # dictionary for adresses of allocated IDs
-    addr = {}
+    id_addr = {}
 
     def __init__(self, c = None):
         '''Creates a new context, with c as surrounding context'''
         self.prev = c
         self.id_type = {}
-        self.addr = {}
+        self.id_addr = {}
+        self.glob = self if c is None else c.glob
 
     def getParent(self):
         '''returns the surrounding context'''
         return self.prev
+
+    def getGlobalContext(self):
+        '''returns the global context'''
+        return self.glob
 
     def isGlobal(self):
         '''Tells if this context is the global context (no parent)'''
@@ -53,8 +150,8 @@ class Context:
 
     def getAddr(self, id):
         '''returns the string corresponding to the register in which this adress returned for this id by alloca is stored'''
-        if id in self.addr:
-            return self.addr[id]
+        if id in self.id_addr:
+            return self.id_addr[id]
         elif self.prev is None:
             return None
         else:
@@ -62,7 +159,7 @@ class Context:
 
     def setAddr(self, id, a):
         '''sets the register in which id is allocated to a'''
-        self.addr[id] = a
+        self.id_addr[id] = a
 
     def new(self):
         '''Sets current context as a new context with the previous surrounding context as parent.
@@ -70,10 +167,10 @@ class Context:
         nc = Context()
         nc.prev = self.prev
         nc.id_type = self.id_type
-        nc.addr = self.addr
+        nc.addr = self.id_addr
         self.prev = nc
         self.id_type = {}
-        self.addr = {}
+        self.id_addr = {}
 
 
     def close(self):
@@ -83,7 +180,7 @@ class Context:
             sys.stderr.write("*ERROR*: trying to close global context\n")
         else:
             self.id_type = self.prev.id_type
-            self.addr = self.prev.addr
+            self.id_addr = self.prev.id_addr
             self.prev = self.prev.prev
 
 
