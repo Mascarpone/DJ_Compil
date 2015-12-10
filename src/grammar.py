@@ -217,8 +217,6 @@ def p_declarator_2(p):
 
 # ---------------- trié jusque là
 
-# WARNING !! Faire attention dans les opérations aux registres qui contiennent un pointeur ou une valeur
-
 def p_primary_expression_id(p):
     '''primary_expression : ID'''
     if not cc.exists(p[1]):
@@ -243,6 +241,12 @@ def p_primary_expression_iconst(p):
 def p_primary_expression_fconst(p):
     '''primary_expression : FCONST'''
     p[0] = {"type" : ["v", "float"], "code" : "", "reg" : p[1]}
+    pass
+
+def p_primary_expression_sconst(p):
+    '''primary_expression : SCONST'''
+    
+    p[0] = {"type" : ["a", ["v", "i8"]], "code" : "SCONST", "reg" : p[1]}
     pass
 
 def p_primary_expression_paren_expr(p):
