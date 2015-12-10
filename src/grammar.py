@@ -460,7 +460,6 @@ def p_multiplicative_expression_2(p):
         op = "mul"
     elif t[1] == "float":
         op = "fmul"
-
     code = p[1]["code"] + p[3]["code"]
     r1 = p[1]["reg"]
     r2 = p[3]["reg"]

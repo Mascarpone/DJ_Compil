@@ -22,7 +22,7 @@ from grammar import cc
 #if __name__ == "__main__":
 
 if len(sys.argv) < 3:
-    sys.stderr.write("usage: ...\n")
+    sys.stderr.write("Usage: "+sys.argv[0]+" <input_file> <output_file>\n")
     sys.exit(1)
 
 # read source file
@@ -42,6 +42,5 @@ if result is None:
 else:
     print("\n        ===== CODE =====\n")
     print(result["code"])
-    f = open(sys.argv[2], 'w')
-    f.write(result["code"])
-    f.close()
+    with open("./"+sys.argv[2], "w") as f:
+	    f.write(result["code"])
