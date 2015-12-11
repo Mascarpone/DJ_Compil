@@ -4,83 +4,70 @@
 
 import sys
 
-
 class Type:
     '''A generic class to decribe types'''
     def isValue(self):
         return False
 
-    def isFunction(self):
+    def isArray(self):
         return False
 
-    def isArray(self):
+    def isFunction(self):
         return False
 
 
 class ValueType(Type):
-    '''A generic class to decribe types'''
-    def __init__(self):
-        self.t = None
+    '''A class to decribe primary types'''
+    def __init__(self, t = -1):
+        self.t = t
 
     def isValue(self):
         return True
 
-    def setVoid():
-        self.t = "void"
+    def isDefined(self):
+        return self.t != -1
 
-    def isVoid():
-        return self.t = "void"
+    def __str__(self):
+        try:
+            return ["void","i32","i8","float"][self.t]
+        except IndexError:
+            raise TypeError
 
-    def setInt(self):
-        self.t = "i32"
-
-    def isInt(self):
-        return self.t == "i32"
-
-    def setChar(self):
-        self.t = "i8"
-
-    def isChar(self):
-        return self.t == "i8"
-
-    def setFloat(self):
-        self.t = "float"
-
-    def isFloat(self):
-        return self.t == "float"
-
-    def setUndefined(self):
-        self.t = None
-
-    def isUndefined(self):
-        return self.t == None
+ValueType.UNDEF = ValueType(-1)
+ValueType.VOID  = ValueType(0)
+ValueType.INT   = ValueType(1)
+ValueType.CHAR  = ValueType(2)
+ValueType.FLOAT = ValueType(3)
 
 
 class FunctionType(Type):
-    '''A generic class to decribe types'''
-    def __init__(self):
-        self.r = None
-        self.a = [] # list
+    '''A class to decribe function types'''
+    def __init__(self, ret = ValueType.VOID, args = []):
+        self.r = ret
+        self.a = args # list
 
     def isFunction(self):
         return True
 
-    def setReturnType(t):
+    def setReturnType(self, t):
         self.r = t
 
-    def getReturnType():
+    def getReturnType(self):
         return self.r
 
-    def setArgType(i, t):
-        if i < len(self.a):
+    def setArgType(selfi, t):
+        if 0 <= i and i < len(self.a):
             self.a[i] = t
         elif i == len(self.a):
             self.a.append(t)
         else:
             raise IndexError
 
-    def getArgType(i):
+    def getArgType(self, i):
         return self.a[i]
+
+    def __str__(self):
+        return self.r + "(" + ", ".join(self.a) + ")" # with a trailing * ?
 
 
 class ArrayType(Type):
