@@ -4,81 +4,88 @@
 
 import sys
 
-class Type:
-    '''A generic class to decribe types'''
-    def isValue(self):
-        return False
 
-    def isArray(self):
-        return False
-
-    def isFunction(self):
-        return False
+def warning(lineno, msg):
+    sys.stderr.write("*WARNING* (l." + str(lineno) + "): " + msg + "\n")
 
 
-class ValueType(Type):
-    '''A class to decribe primary types'''
-    def __init__(self, t = -1):
-        self.t = t
-
-    def isValue(self):
-        return True
-
-    def isDefined(self):
-        return self.t != -1
-
-    def __str__(self):
-        try:
-            return ["void","i32","i8","float"][self.t]
-        except IndexError:
-            raise TypeError
-
-ValueType.UNDEF = ValueType(-1)
-ValueType.VOID  = ValueType(0)
-ValueType.INT   = ValueType(1)
-ValueType.CHAR  = ValueType(2)
-ValueType.FLOAT = ValueType(3)
+def error(lineno, msg):
+    #global produce_code
+    #produce_code = False
+    sys.stderr.write("*ERROR* (l." + str(lineno) + "): " + msg + "\n")
+    raise SyntaxError
 
 
-class FunctionType(Type):
-    '''A class to decribe function types'''
-    def __init__(self, ret = ValueType.VOID, args = []):
-        self.r = ret
-        self.a = args # list
-
-    def isFunction(self):
-        return True
-
-    def setReturnType(self, t):
-        self.r = t
-
-    def getReturnType(self):
-        return self.r
-
-    def setArgType(selfi, t):
-        if 0 <= i and i < len(self.a):
-            self.a[i] = t
-        elif i == len(self.a):
-            self.a.append(t)
-        else:
-            raise IndexError
-
-    def getArgType(self, i):
-        return self.a[i]
-
-    def __str__(self):
-        return self.r + "(" + ", ".join(self.a) + ")" # with a trailing * ?
-
-
-class ArrayType(Type):
-    '''A generic class to decribe types'''
-    def isArray(self):
-        return True
-
-
-
-
-
+#class Type:
+#    '''A generic class to decribe types'''
+#    def isValue(self):
+#        return False
+#
+#    def isArray(self):
+#        return False
+#
+#    def isFunction(self):
+#        return False
+#
+#
+#class ValueType(Type):
+#    '''A class to decribe primary types'''
+#    def __init__(self, t = -1):
+#        self.t = t
+#
+#    def isValue(self):
+#        return True
+#
+#    def isDefined(self):
+#        return self.t != -1
+#
+#    def __str__(self):
+#        try:
+#            return ["void","i32","i8","float"][self.t]
+#        except IndexError:
+#            raise TypeError
+#
+#ValueType.UNDEF = ValueType(-1)
+#ValueType.VOID  = ValueType(0)
+#ValueType.INT   = ValueType(1)
+#ValueType.CHAR  = ValueType(2)
+#ValueType.FLOAT = ValueType(3)
+#
+#
+#class FunctionType(Type):
+#    '''A class to decribe function types'''
+#    def __init__(self, ret = ValueType.VOID, args = []):
+#        self.r = ret
+#        self.a = args # list
+#
+#    def isFunction(self):
+#        return True
+#
+#    def setReturnType(self, t):
+#        self.r = t
+#
+#    def getReturnType(self):
+#        return self.r
+#
+#    def setArgType(selfi, t):
+#        if 0 <= i and i < len(self.a):
+#            self.a[i] = t
+#        elif i == len(self.a):
+#            self.a.append(t)
+#        else:
+#            raise IndexError
+#
+#    def getArgType(self, i):
+#        return self.a[i]
+#
+#    def __str__(self):
+#        return self.r + "(" + ", ".join(self.a) + ")" # with a trailing * ?
+#
+#
+#class ArrayType(Type):
+#    '''A generic class to decribe types'''
+#    def isArray(self):
+#        return True
 
 
 
@@ -136,7 +143,7 @@ class Context:
         self.id_type[id] = t
 
     def getAddr(self, id):
-        '''returns the string corresponding to the register in which this adress returned for this id by alloca is stored'''
+        '''returns the string corresponding to the register in which the adress returned for this id by alloca is stored'''
         if id in self.id_addr:
             return self.id_addr[id]
         elif self.prev is None:
@@ -165,6 +172,7 @@ class Context:
         if self.isGlobal():
             # is there a best way to raise an error ?
             sys.stderr.write("*ERROR*: trying to close global context\n")
+            # raise ... ?
         else:
             self.id_type = self.prev.id_type
             self.id_addr = self.prev.id_addr
@@ -172,18 +180,43 @@ class Context:
 
 
 
+
+# A type is a list
+# the first element tells if it's a simple value (i32, float, i8), an array, or a function
+#   - "v" : simple value
+#   - "a" : array
+#   - "f" : function
+# the second element is the type of the element
+#   - if it's a value the type is a string representing the type
+#   - if it's a 1D array, the type is a string representing the type of the elements, if it's a 2D+ array, it's a new list describing the sub-array
+#   - if it's a function, the type is a function with first element as return type, and others elements as arguments.
+
+
+def type2str(t):
+    '''prints the type t as a string in dj coding convention'''
+    if t[0] == "v":
+        d = {"i32" : "int", "i8" : "char", "float" : "float", "void" : "void"}
+        return d[t[1]]
+    elif t[0] == "a":
+        return type2str(t[1]) + "[]"
+    elif t[0] == "f":
+        if len(t[1]) > 1:
+            return type2str(t[1][0]) + "(*)(" + ", ".join(map(type2str, t[1][1:])) + ")"
+        else:
+            return type2str(t[1][0]) + "(*)()"
+
+
 # Types checking
 def getType(t1, t2, l):
     '''returns the type of the return value of a two-variable operation (*, +, /, -)
        the types in the checkTable are in order : "INT", "FLOAT", "CHAR", None'''
     checkTable = {}
-    checkTable["i32"] = {"i32" : "i32", "float" : "float", "i8" : "i32", None : None}
-    checkTable["float"] = {"i32" : "float", "float" : "float", "i8" : "float", None : None}
-    checkTable["i8"] = {"i32" : "i32", "float" : "float", "i8" : "i8", None : None}
-    checkTable[None] = {"i32" : None, "float" : None, "i8" : None, None : None}
+    checkTable["i32"] = {"i32" : "i32", "float" : "float", "i8" : "i32", "void" : None, None : None}
+    checkTable["float"] = {"i32" : "float", "float" : "float", "i8" : "float", "void" : None, None : None}
+    checkTable["i8"] = {"i32" : "i32", "float" : "float", "i8" : "i8", "void" : None, None : None}
+    checkTable[None] = {"i32" : None, "float" : None, "i8" : None, "void" : None, None : None}
     if t1[0] != "v" or t2[0] != "v" or checkTable[t1[1]][t2[1]] is None:
-        sys.stderr.write("*ERROR* Incompatible types in operation on line " + str(l) + "\n")
-        raise SyntaxError
+        error(l, "Incompatible types in operation. Found '" + type2str(t1) + "' and '" + type2str(t2) + "'")
     return ["v", checkTable[t1[1]][t2[1]]]
 
 # Label generation
@@ -201,35 +234,12 @@ def newReg():
     return "%r" + str(RG_NB)
 
 
-# A type is a list
-# the first element tells if it's a simple value (i32, float, i8), an array, or a function
-#   - "v" : simple value
-#   - "a" : array
-#   - "f" : function
-# the second element is the type of the element
-#   - if it's a value the type is a string representing the type
-#   - if it's a 1D array, the type is a string representing the type of the elements, if it's a 2D+ array, it's a new list describing the sub-array
-#   - if it's a function, the type is a function with first element as return type, and others elements as arguments.
-
-
-
-def warning(lineno, msg):
-    sys.stderr.write("*WARNING* (l." + str(lineno) + "): " + msg + "\n")
-
-
-def error(lineno, msg):
-    #global produce_code
-    #produce_code = False
-    sys.stderr.write("*ERROR* (l." + str(lineno) + "): " + msg + "\n")
-    raise SyntaxError
-
-
 
 
 def checkGenericErrors(cc, result):
     '''Check result to throw errors/warnings at the end of the compilation'''
     # look for main
-    if result is None:
+    if result is None: # check if compilation reached the end
         return
     if not cc.exists("main"):
         sys.stderr.write("*WARNING* this program doesn't have a main() function\n")

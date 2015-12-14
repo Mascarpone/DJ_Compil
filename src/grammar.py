@@ -18,7 +18,6 @@ cc = Context()
 def p_program_1(p):
     '''program : program external_declaration'''
     p[0] = {"code" : p[1]["code"] + "\n" + p[2]["code"] + "\n"}
-    #print cc.id_type
 
 
 def p_program_2(p):
@@ -34,10 +33,11 @@ def p_external_declaration_1(p):
 def p_external_declaration_2(p):
     '''external_declaration : declaration_statement'''
     p[0] = {"code" : p[1]["code"]}
-    pass
+
 
 def p_external_declaration_3(p):
     '''external_declaration : EXTERN declaration_statement'''
+    #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
     p[0] = {"code" : "declare " + p[2]["code"]}
     pass
 
@@ -45,6 +45,7 @@ def p_external_declaration_4(p):
     '''external_declaration : EXTERN type_name function_declarator arguments_declaration SEMI'''
     # function_declarator open a new context that must be closed
     cc.close()
+    # now back in global context:
     cc.setType(p[3]["name"], ["f", [p[2]["type"]]+p[4]["type"]])
     p[0] = {"code" : "declare " + p[2]["code"] + " @" + p[3]["name"] + "(" + p[4]["code"] + ")"}
     pass
