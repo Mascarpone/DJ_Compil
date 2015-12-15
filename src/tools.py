@@ -5,15 +5,34 @@
 import sys
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def warning(lineno, msg):
-    sys.stderr.write("*WARNING* (l." + str(lineno) + "): " + msg + "\n")
+    sys.stderr.write(bcolors.WARNING + "*WARNING*" + bcolors.ENDC + " (l." + str(lineno) + "): " + msg + "\n")
 
 
 def error(lineno, msg):
     #global produce_code
     #produce_code = False
-    sys.stderr.write("*ERROR* (l." + str(lineno) + "): " + msg + "\n")
+    sys.stderr.write(bcolors.FAIL + "*ERROR*" + bcolors.ENDC + " (l." + str(lineno) + "): " + msg + "\n")
     raise SyntaxError
+
+
+def internal_error(lineno, msg):
+    #global produce_code
+    #produce_code = False
+    sys.stderr.write(bcolors.FAIL + "*INTERNAL ERROR*" + bcolors.ENDC + " (l." + str(lineno) + "): " + msg + "\n")
+    raise SystemError
+
 
 
 #class Type:
@@ -204,6 +223,19 @@ def type2str(t):
             return type2str(t[1][0]) + "(*)(" + ", ".join(map(type2str, t[1][1:])) + ")"
         else:
             return type2str(t[1][0]) + "(*)()"
+
+
+def isValue(t):
+    '''tells if t is a value type'''
+    return t[0] == "v"
+
+def isArray(t):
+    '''tells if t is an array type'''
+    return t[0] == "a"
+
+def isFunction(t):
+    '''tells if t is a function type'''
+    return t[0] == "f"
 
 
 # Types checking

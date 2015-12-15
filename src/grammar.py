@@ -216,56 +216,82 @@ def p_declarator_2(p):
     pass
 
 
-# ---------------- trié jusque là
-
-# WARNING !! Faire attention dans les opérations aux registres qui contiennent un pointeur ou une valeur
-
 def p_primary_expression_id(p):
     '''primary_expression : ID'''
-    if not cc.exists(p[1]):
-        print(cc.id_type)
-        error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
-    r = cc.getAddr(p[1])
+
+    # get variable type and check if it has been defined
     t = cc.getType(p[1])
+    if t is None:
+        error(p.lineno(1), "The variable '" + p[1] + "' is not defined")
 
-    reg = newReg()
+    # get register where the variable is stored
+    r = cc.getAddr(p[1])
+    if r is None:
+        error(p.lineno(1), "The variable '" + p[1] + "' has not been initialized")
 
-    p[0] = {"type" : t,
-            "code" : reg + " = load " + t[1] + "* " + r + "\n",
-            "reg" : reg,
-            "addr" : r}
-    pass
+    p[0] = {"type" : t}
+    # when its a value, generate load code
+    if isValue(t):
+        p[0]["reg"] = newReg() # register for the value
+        p[0]["code"] = p[0]["reg"] + " = load " + t[1] + "* " + r + "\n"
+        p[0]["addr"] = r # keep address for affectation statement
+
 
 def p_primary_expression_iconst(p):
     '''primary_expression : ICONST'''
     p[0] = {"type" : ["v", "i32"], "code" : "", "reg" : p[1]}
-    pass
+
 
 def p_primary_expression_fconst(p):
     '''primary_expression : FCONST'''
+    #TODO : convert fconst to hexa ?
     p[0] = {"type" : ["v", "float"], "code" : "", "reg" : p[1]}
-    pass
+
 
 def p_primary_expression_paren_expr(p):
     '''primary_expression : LPAREN expression RPAREN'''
     p[0] = {"type" : p[2]["type"], "code" : p[2]["code"], "reg" : p[2]["reg"]}
-    pass
+
 
 def p_primary_expression_map(p):
     '''primary_expression : MAP LPAREN postfix_expression COMMA postfix_expression RPAREN'''
-    p[0] = {"type" : ["a", ["v", "i32"]], "code" : "primary_expression_map", "reg" : "registre"}
-    pass
+    # T1[] b = map(T1(*)(T2) f, T2[] a)
+    if not isFunction(p[3]["type"]):
+        error(p.lineno(3), "First argument of function 'map()' is expected to be a function. Got a '" + type2str(p[3]["type"]) + "'.")
+    if not isArray(p[5]["type"]):
+        error(p.lineno(5), "Second argument of function 'map()' is expected to be an array. Got a '" + type2str(p[5]["type"]) + "'.")
+    if len(p[3]["type"][1]) != 2: # return type and one argument
+        error(p.lineno(5), "The function passed to 'map()' is not taking the expected number of arguments. Got '" + len(p[3]["type"][1]) + "', expected 1.")
+    #       arg type      !=   array type
+    if p[3]["type"][1][1] != p[5]["type"][1]:
+        error(p.lineno(1), "Incompatible types in 'map()'. You are trying to match '" + p[3]["type"][1][1] + "' with '" + p[5]["type"][1] + "'.")
+    p[0] = {"type" : ["a", p[3]["type"][1][0]], "code" : "; primary_expression_map", "reg" : "registre"}
+
 
 def p_primary_expression_reduce(p):
+    # T b = reduce(T(*)(T,T) f, T[] a)
     '''primary_expression : REDUCE LPAREN postfix_expression COMMA postfix_expression RPAREN'''
-    p[0] = {"type" : ["v", "i32"], "code" : "primary_expression_reduce", "reg" : "registre"}
-    pass
+    if not isFunction(p[3]["type"]):
+        error(p.lineno(3), "First argument of function 'reduce()' is expected to be a function. Got a '" + type2str(p[3]["type"]) + "'.")
+    if not isArray(p[5]["type"]):
+        error(p.lineno(5), "Second argument of function 'reduce()' is expected to be an array. Got a '" + type2str(p[5]["type"]) + "'.")
+    if len(p[3]["type"][1]) != 3: # return type and two arguments
+        error(p.lineno(5), "The function passed to 'reduce()' is not taking the expected number of arguments. Got '" + len(p[3]["type"][1]) + "', expected 2.")
+    #      return type    !=   array type    or     arg1 type      !=   array type    or     arg2 type      !=   array type
+    if p[3]["type"][1][0] != p[5]["type"][1] or p[3]["type"][1][1] != p[5]["type"][1] or p[3]["type"][1][2] != p[5]["type"][1]:
+        error(p.lineno(1), "Incompatible types in 'reduce()'. You are trying to match '" + p[3]["type"][1][0] + "', '" + p[3]["type"][1][1] + "', '" + p[3]["type"][1][2] + "' with '" + p[5]["type"][1] + "'.")
+    p[0] = {"type" : ["v", p[3]["type"][1][0]], "code" : "; primary_expression_reduce", "reg" : "registre"}
+
 
 def p_primary_expression_id_paren(p):
     '''primary_expression : ID LPAREN RPAREN'''
     if not cc.exists(p[1]):
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
     t = cc.getType(p[1])
+    if not isFunction(t):
+        error(p.lineno(p[1]), "You are trying to call '" + p[1] + "', which is not a function.")
+    
+
     if t[1][0][1] == "void":
         code = "call " + t[1][0][1] + " @" + p[1] + "()" + "\n"
         reg = None
