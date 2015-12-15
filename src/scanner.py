@@ -22,7 +22,7 @@ reserved = (
 
 tokens = reserved + (
     # Literals (identifier, integer constant, float constant, string constant, char const)
-    'ID', 'ICONST', 'FCONST', # 'SCONST', 'CCONST',
+    'ID', 'ICONST', 'FCONST', 'SCONST', #'CCONST',
 
     # Operators (+,-,*,/,%,|,&,~,^,<<,>>, ||, &&, !, <, <=, >, >=, ==, !=)
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
@@ -122,7 +122,7 @@ t_ICONST = r'\d+'
 t_FCONST = r'(\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+)'
 
 # String literal
-#t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
+t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
 
 # Character constant 'c'
 #t_CCONST = r'\'([^\\\n]|(\\.))*?\''

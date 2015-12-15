@@ -34,12 +34,10 @@ def p_external_declaration_2(p):
     '''external_declaration : declaration_statement'''
     p[0] = {"code" : p[1]["code"]}
 
-
 def p_external_declaration_3(p):
     '''external_declaration : EXTERN declaration_statement'''
     #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
     p[0] = {"code" : "declare " + p[2]["code"]}
-    pass
 
 def p_external_declaration_4(p):
     '''external_declaration : EXTERN type_name function_declarator arguments_declaration SEMI'''
@@ -244,8 +242,17 @@ def p_primary_expression_iconst(p):
 
 def p_primary_expression_fconst(p):
     '''primary_expression : FCONST'''
-    #TODO : convert fconst to hexa ?
-    p[0] = {"type" : ["v", "float"], "code" : "", "reg" : p[1]}
+    p[0] = {"type" : ["v", "float"], "code" : "", "reg" : float_to_hex(float(p[1]))}
+    pass
+
+def p_primary_expression_sconst(p):
+    '''primary_expression : SCONST'''
+    s = newGBVar()
+    l = len(p[1]) - 2
+    #setGB(s + " = internal constant [" + str(l) + " x i8] c" + p[1])
+    reg = "getelementptr([" + str(l) + " x i8]* " + s + ", i32 0, i32 0)"
+    p[0] = {"type" : ["a", ["v", "i8"]], "code" : "", "reg" : reg}
+    pass
 
 
 def p_primary_expression_paren_expr(p):
@@ -290,7 +297,7 @@ def p_primary_expression_id_paren(p):
     t = cc.getType(p[1])
     if not isFunction(t):
         error(p.lineno(p[1]), "You are trying to call '" + p[1] + "', which is not a function.")
-    
+
 
     if t[1][0][1] == "void":
         code = "call " + t[1][0][1] + " @" + p[1] + "()" + "\n"
@@ -314,8 +321,10 @@ def p_primary_expression_id_paren_args(p):
         for r, ty in zip(p[3]["reg"], p[3]["type"]):
             if ty[0] == "v":
                 code += ty[1] + " " + r
-            else: #functions
+            elif ty[0] == "f": #function
                 code += ty[1][0][1] + " " + r
+            else: #array
+                code += ty[1][1] + "* " + r
         code += ")\n"
         reg = None
     else:
