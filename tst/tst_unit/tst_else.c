@@ -11,6 +11,8 @@
  *      Pas d'erreur.
  */
 
+ extern void print(char a);
+
 int main()
 {
     int a = 1;

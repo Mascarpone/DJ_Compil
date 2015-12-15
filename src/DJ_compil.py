@@ -42,5 +42,5 @@ if result is None:
 else:
     print("\n        ===== CODE =====\n")
     print(result["code"])
-    with open("./"+sys.argv[2], "w") as f:
+    with open("./" + sys.argv[2], "w") as f:
 	    f.write(result["code"])

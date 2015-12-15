@@ -75,7 +75,6 @@ class Context:
         self.id_type = {}
         self.addr = {}
 
-
     def close(self):
         '''Set current context back to its parent'''
         if self.isGlobal():
@@ -85,8 +84,6 @@ class Context:
             self.id_type = self.prev.id_type
             self.addr = self.prev.addr
             self.prev = self.prev.prev
-
-
 
 # Types checking
 def getType(t1, t2, l):
@@ -115,6 +112,24 @@ def newReg():
     global RG_NB
     RG_NB += 1
     return "%r" + str(RG_NB)
+
+# Global variable generation
+GB_NB = 0
+def newGBVar():
+    global GB_NB
+    GB_NB += 1
+    return "@.var" + str(GB_NB)
+
+# convert float to hex
+import struct
+def float_to_hex(value):
+    v = struct.unpack('f', struct.pack('f', value))[0]
+    raw = struct.pack('d', float(v))
+    intrep = struct.unpack('Q', raw)[0]
+    out = '{{0:#{0}x}}'.format(16).format(intrep)
+    return out
+
+
 
 
 # A type is a list
