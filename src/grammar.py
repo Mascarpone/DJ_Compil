@@ -36,8 +36,7 @@ def p_external_declaration_2(p):
 
 def p_external_declaration_3(p):
     '''external_declaration : EXTERN declaration_statement'''
-    #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
-    p[0] = {"code" : "declare " + p[2]["code"]}
+    p[0] = {"code" : ""}
 
 def p_external_declaration_4(p):
     '''external_declaration : EXTERN type_name function_declarator arguments_declaration SEMI'''
@@ -249,7 +248,7 @@ def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
     s = newGBVar()
     l = len(p[1]) - 2
-    #setGB(s + " = internal constant [" + str(l) + " x i8] c" + p[1])
+    setGB(s + " = internal constant [" + str(l) + " x i8] c" + p[1])
     reg = "getelementptr([" + str(l) + " x i8]* " + s + ", i32 0, i32 0)"
     p[0] = {"type" : ["a", ["v", "i8"]], "code" : "", "reg" : reg}
     pass
@@ -478,502 +477,230 @@ def p_unary_expression_5(p):
             }
     pass
 
-def p_multiplicative_expression_1(p):
-    '''multiplicative_expression : unary_expression'''
-    p[0] = {"reg" : p[1]["reg"],
-            "code" : p[1]["code"],
-            "type" : p[1]["type"]}
-    pass
+# >>>> Rangé à partir d'ici >>>>
 
-def p_multiplicative_expression_2(p):
-    '''multiplicative_expression : multiplicative_expression TIMES unary_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if t[1] == "i32" or t[1] == "i8":
-        op = "mul"
-    elif t[1] == "float":
-        op = "fmul"
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
+# Operations
 
-    if p[1]["type"] != t:
+def convert(reg, tbefore, tafter, newreg, lineno):
+    '''Returns the code to convert in llvm the value in reg from type tbefore to tafter and store it in newreg'''
+    if tbefore.equals(ValueType.CHAR) and tafter.equals(ValueType.INT):
+        op = "sext"
+    elif (tbefore.equals(ValueType.INT) or tbefore.equals(ValueType.CHAR)) and tafter.equals(ValueType.FLOAT):
+        op = "sitofp"
+    else :
+        error(lineno, "Invalid implicit conversion.")
+
+    return newreg + " = " + op + " " + type2str(tbefore) + " " + reg + " to " + type2str(tafter) + "\n"
+
+operation_intchar = {"*" : "mul", "/" : "sdiv", "%" : "srem", "+" : "add", "-" : "sub", "<" : "icmp slt", ">" : "icmp sgt", "<=" : "icmp sle", ">=" : "icmp sge", "==" : "icmp eq", "!=" : "icmp ne"}
+operation_float = {"*" : "fmul", "/" : "fdiv", "%" : "frem", "+" : "fadd", "-" : "fsub", "<" : "fcmp olt", ">" : "fcmp ogt", "<=" : "fcmp ole", ">=" : "fcmp oge", "==" : "fcmp oeq", "!=" : "fcmp one"}
+def operation(operation, op1, op2, lineno):
+    '''Generates the code and the registers necessary to implement the operation between op1 and op2'''
+    t = op1["type"].getOpResultType(op2["type"])
+    if t is None or not t.isValue():
+        error(lineno, "Incompatible types in operation " + operation + ". Got " + type2str(op1["type"]) + " and " + type2str(op2["type"]))
+
+    if t.equals(ValueType.INT) or t.equals(ValueType.CHAR):
+        operation_llvm = operation_intchar[operation]
+    if t.equals(ValueType.FLOAT):
+        operation_llvm = operation_float[operation]
+
+    code = op1["code"] + op2["code"]
+
+    r1 = op1["reg"]
+    r2 = op2["reg"]
+    if not op1["type"].equals(t):
         r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
+        code += convert(op1["reg"], op1["type"], t, r1, lineno)
+    if not op2["type"].equals(t):
         r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
+        code += convert(op2["reg"], op2["type"], t, r2, lineno)
 
     r3 = newReg()
+    code += r3 + " = " + operation_llvm + " " + str(t) + " " + r1 + ", " + r2 + "\n"
 
-    p[0] = {"reg" : r3,
-            "code" : code + r3 + " = " + op + " " + t[1] + " " + r1 + ", " + r2 + "\n",
-            "type" : t}
-    pass
+    return {"reg" : r3, "code" : code, "type" : t} #WARNING: type t is false if the operation is a comparison (then it is a i1)
 
-def p_multiplicative_expression_3(p):
-    '''multiplicative_expression : multiplicative_expression DIVIDE unary_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if t[1] == "i32" or t[1] == "i8":
-        op = "sdiv"
-    elif t[1] == "float":
-        op = "fdiv"
+#Comparison Expressions
 
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-
-    p[0] = {"reg" : r3,
-            "code" : code + r3 + " = " + op + " " + t[1] + " " + r1 + ", " + r2 + "\n",
-            "type" : t}
-    pass
-
-def p_multiplicative_expression_4(p):
-    '''multiplicative_expression : multiplicative_expression MOD unary_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if t[1] == "i32" or t[1] == "i8":
-        op = "srem"
-    elif t[1] == "float":
-        op = "frem"
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-
-    p[0] = {"reg" : r3,
-            "code" : code + r3 + " = " + op + " " + t[1] + " " + r1 + ", " + r2 + "\n",
-            "type" : t}
-    pass
-
-def p_multiplicative_expression_5(p):
-    '''multiplicative_expression : multiplicative_expression LAND unary_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if t[1] == "i32" or t[1] == "i8":
-        op = "mul"
-    elif t[1] == "float":
-        op = "fmul"
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code +=  r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    r5 = newReg()
-
-    p[0] = {"reg" : r5,
-            "code" : code + r3 + " = " + op + " " + t[1] + " " + r1 + ", " + r2 + "\n"
-                   + r4 + " = icmp eq " + t[1] + " " + r3 + ", 0 \n"
-                   + r5 + " = zext i1 " + r4 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
-
-def p_additive_expression_1(p):
-    '''additive_expression : multiplicative_expression'''
-    p[0] = {"reg" : p[1]["reg"],
-            "code" : p[1]["code"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_additive_expression_2(p):
-    '''additive_expression : additive_expression PLUS multiplicative_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    r1 = newReg()
-
-    if t[1] == "i32" or t[1] == "i8":
-        op = "add"
-    elif t[1] == "float":
-        op = "fadd"
-
-    code = p[1]["code"] + p[3]["code"]
-    r2 = p[1]["reg"]
-    r3 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r2 = newReg()
-        code +=  r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
-        r3 = newReg()
-        code += r3 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    p[0] = {"reg" : r1,
-            "code" : code + r1 + " = " + op + " " + t[1] + " " + r2 + ", " + r3 + "\n",
-            "type" : t}
-    pass
-
-def p_additive_expression_3(p):
-    '''additive_expression : additive_expression MINUS multiplicative_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    r1 = newReg()
-
-    if t[1] == "i32" or t[1] == "i8":
-        op = "sub"
-    elif t[1] == "float":
-        op = "fsub"
-
-    code = p[1]["code"] + p[3]["code"]
-    r2 = p[1]["reg"]
-    r3 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r2 = newReg()
-        code +=  r2 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
-        r3 = newReg()
-        code += r3 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    p[0] = {"reg" : r1,
-            "code" : code + r1 + " = " + op + " " + t[1] + " " + r2 + ", " + r3 + "\n",
-            "type" : t}
-    pass
-
-def p_additive_expression_4(p):
-    '''additive_expression : additive_expression LOR multiplicative_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code +=  r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    r5 = newReg()
-    if t[1] == "i32" or t[1] == "i8":
-        op = "add"
-    elif t[1] == "float":
-        op = "fadd"
-
-    p[0] = {"reg" : r1,
-            "code" : p[1]["code"] + p[3]["code"]
-                   + r3 + " = " + op + " " + t[1] + " " + r1 + ", " + r2 + "\n"
-                   + r4 + " = icmp eq " + t[1] + " " + r3 + ", 0 \n"
-                   + r5 + " = zext i1 " + r4 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+def comparisonOperation(comparison, op1, op2, lineno):
+    '''Generates the code and the registers necessary to implement the comparison between op1 and op2'''
+    resi1 = operation(comparison, op1, op2, lineno)
+    booli32 = newReg()
+    return {"reg"  : booli32,
+            "code" : resi1["code"]
+                     + booli32 + " = zext i1 " + resi1["reg"] + " to i32\n",
+            "type" : ValueType.INT}
 
 def p_comparison_expression_1(p):
     '''comparison_expression : additive_expression'''
-    p[0] = {"reg" : p[1]["reg"],
-            "code" : p[1]["code"],
-            "type" : p[1]["type"]}
-    pass
+    p[0] = {"reg" : p[1]["reg"], "code" : p[1]["code"], "type" : p[1]["type"]}
 
 def p_comparison_expression_2(p):
     '''comparison_expression : additive_expression LT additive_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    p[0] = {"reg" : r4,
-            "code" : code + r3 + " = icmp slt " + t[1] + " " + r1 + ", " + r2 + "\n"
-                     + r4 + " = zext i1 " + r3 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+    p[0] = comparisonOperation(p[2], p[1], p[3], p.lineno(0))
 
 def p_comparison_expression_3(p):
     '''comparison_expression : additive_expression GT additive_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    p[0] = {"reg" : r4,
-            "code" : code + r3 + " = icmp sgt " + t[1] + " " + r1 + ", " + r2 + "\n"
-                     + r4 + " = zext i1 " + r3 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+    p[0] = comparisonOperation(p[2], p[1], p[3], p.lineno(0))
 
 def p_comparison_expression_4(p):
     '''comparison_expression : additive_expression LE additive_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    p[0] = {"reg" : r4,
-            "code" : code + r3 + " = icmp sle " + t[1] + " " + r1 + ", " + r2 + "\n"
-                     + r4 + " = zext i1 " + r3 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+    p[0] = comparisonOperation(p[2], p[1], p[3], p.lineno(0))
 
 def p_comparison_expression_5(p):
     '''comparison_expression : additive_expression GE additive_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    p[0] = {"reg" : r4,
-            "code" : code + r3 + " = icmp sge " + t[1] + " " + r1 + ", " + r2 + "\n"
-                     + r4 + " = zext i1 " + r3 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+    p[0] = comparisonOperation(p[2], p[1], p[3], p.lineno(0))
 
 def p_comparison_expression_6(p):
     '''comparison_expression : additive_expression EQ additive_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
-
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
-
-    if p[3]["type"] != t:
-        r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
-
-    r3 = newReg()
-    r4 = newReg()
-    p[0] = {"reg" : r4,
-            "code" : code + r3 + " = icmp eq " + t[1] + " " + r1 + ", " + r2 + "\n"
-                     + r4 + " = zext i1 " + r3 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+    p[0] = comparisonOperation(p[2], p[1], p[3], p.lineno(0))
 
 def p_comparison_expression_7(p):
     '''comparison_expression : additive_expression NE additive_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
+    p[0] = comparisonOperation(p[2], p[1], p[3], p.lineno(0))
 
-    code = p[1]["code"] + p[3]["code"]
-    r1 = p[1]["reg"]
-    r2 = p[3]["reg"]
+#Additive Expression
 
-    if p[1]["type"] != t:
-        r1 = newReg()
-        code += r1 + " = sext " + p[1]["type"][1] + " " + p[1]["reg"] + " to " + t[1] + "\n"
+def p_additive_expression_1(p):
+    '''additive_expression : multiplicative_expression'''
+    p[0] = {"reg" : p[1]["reg"], "code" : p[1]["code"], "type" : p[1]["type"]}
+def p_additive_expression_2(p):
+    '''additive_expression : additive_expression PLUS multiplicative_expression'''
+    p[0] = operation(p[2], p[1], p[3], p.lineno(0))
 
-    if p[3]["type"] != t:
+def p_additive_expression_3(p):
+    '''additive_expression : additive_expression MINUS multiplicative_expression'''
+    p[0] = operation(p[2], p[1], p[3], p.lineno(0))
+
+def p_additive_expression_4(p):
+    '''additive_expression : additive_expression LOR multiplicative_expression'''
+    add = operation("+", p[1], p[3], p.lineno(0))
+    booli1_cmpto0 = newReg()
+    booli32_cmpto0 = newReg()
+
+    p[0] = {"reg"  : booli32_cmpto0,
+            "code" : add["code"]
+                   + booli1_cmpto0 + " = icmp eq " + type2str(add["type"]) + " " + add["reg"] + ", 0 \n"
+                   + booli32_cmpto0 + " = zext i1 " + booli1_cmpto0 + " to i32\n",
+            "type" : ValueType.INT}
+
+#Multiplicative Expression
+
+def p_multiplicative_expression_1(p):
+    '''multiplicative_expression : unary_expression'''
+    p[0] = {"reg" : p[1]["reg"], "code" : p[1]["code"], "type" : p[1]["type"]}
+
+def p_multiplicative_expression_2(p):
+    '''multiplicative_expression : multiplicative_expression TIMES unary_expression'''
+    p[0] = operation(p[2], p[1], p[3], p.lineno(0))
+
+def p_multiplicative_expression_3(p):
+    '''multiplicative_expression : multiplicative_expression DIVIDE unary_expression'''
+    p[0] = operation(p[2], p[1], p[3], p.lineno(0))
+
+def p_multiplicative_expression_4(p):
+    '''multiplicative_expression : multiplicative_expression MOD unary_expression'''
+    p[0] = operation(p[2], p[1], p[3], p.lineno(0))
+
+def p_multiplicative_expression_5(p):
+    '''multiplicative_expression : multiplicative_expression LAND unary_expression'''
+    mul = operation("*", p[1], p[3], p.lineno(0))
+    booli1_cmpto0 = newReg()
+    booli32_cmpto0 = newReg()
+
+    p[0] = {"reg"  : booli32_cmpto0,
+            "code" : mul["code"]
+                   + booli1_cmpto0 + " = icmp eq " + type2str(mul["type"]) + " " + mul["reg"] + ", 0 \n"
+                   + booli32_cmpto0 + " = zext i1 " + booli1_cmpto0 + " to i32\n",
+            "type" : ValueType.INT}
+
+#Affectation Expression
+
+def expressionOperation(operation, op1, op2, lineno):
+    '''Generates the code and the registers necessary to implement the affectation operation between op1 and op2'''
+    t = op1["type"].getOpResultType(op2["type"])
+    if t is None or not t.isValue() or not op1["type"].equals(t):
+        error(lineno, "Incompatible types in operation " + operation + ". Got " + type2str(op1["type"]) + " and " + type2str(op2["type"]))
+
+    if t.equals(ValueType.INT) or t.equals(ValueType.CHAR):
+        operation_llvm = operation_intchar[operation]
+    if t.equals(ValueType.FLOAT):
+        operation_llvm = operation_float[operation]
+
+    code = op1["code"] + op2["code"]
+
+    op1load = newReg()
+    code += op1load + " = load " + type2str(op1["type"]) + "* " + op1["addr"] + "\n"
+
+    r2 = op2["reg"]
+    if not op2["type"].equals(t):
         r2 = newReg()
-        code += r2 + " = sext " + p[3]["type"][1] + " " + p[3]["reg"] + " to " + t[1] + "\n"
+        code += convert(op2["reg"], op2["type"], t, r2, lineno)
 
-    r3 = newReg()
-    r4 = newReg()
-    p[0] = {"reg" : r4,
-            "code" : code + r3 + " = icmp ne " + t[1] + " " + r1 + ", " + r2 + "\n"
-                     + r4 + " = zext i1 " + r3 + " to i32\n",
-            "type" : ["v", "i32"]}
-    pass
+    result = newReg()
+    code += result + " = " + operation_llvm + " " + str(t) + " " + op1load + ", " + r2 + "\n"
+    code += "store " + type2str(op1["type"]) + " " + result + ", " + type2str(op1["type"]) + "* " + op1["addr"] + "\n"
+
+    return {"type" : t,
+            "reg"  : result,
+            "addr" : op1["addr"],
+            "code" : code
+            }
 
 def p_expression_1(p):
-    '''expression : unary_expression EQUALS comparison_expression'''
-    if p[1]["type"] != p[3]["type"]:
-        error(p.lineno(0), "Incompatible types in operation")
-    if p[1]["type"][1] == "i32" or p[1]["type"][1] == "i8":
-        op = "add"
-    elif p[1]["type"][1] == "float":
-        op = "fadd"
-    r = newReg()
-    p[0] = {"code" : p[1]["code"] + p[3]["code"]
-                   + r + " = " + op + " " + p[1]["type"][1] + " " + p[3]["reg"] + ", 0\n"
-                   + "store " + p[1]["type"][1] + " " + r + ", " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n",
-            "reg" : p[1]["reg"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_expression_2(p):
-    '''expression : unary_expression TIMESEQUAL comparison_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if p[1]["type"] != t:
-        error(p.lineno(0), "Incompatible types in operation")
-        raise SyntaxError
-    if t[1] == "i32" or t[1] == "i8":
-        op = "mul"
-    elif t[1] == "float":
-        op = "fmul"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + p[3]["code"]
-                   + r1 + " = load " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n"
-                   + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
-                   + "store " + p[1]["type"][1] + " " + r2 + ", " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n",
-            "reg" : r2,
-            "addr" : p[1]["addr"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_expression_3(p):
-    '''expression : unary_expression DIVEQUAL comparison_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if p[1]["type"] != t:
-        error(p.lineno(0), "Incompatible types in operation")
-        raise SyntaxError
-    if t[1] == "i32" or t[1] == "i8":
-        op = "sdiv"
-    elif t[1] == "float":
-        op = "fdiv"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + p[3]["code"]
-                   + r1 + " = load " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n"
-                   + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
-                   + "store " + p[1]["type"][1] + " " + r2 + ", " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n",
-            "reg" : r2,
-            "addr" : p[1]["addr"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_expression_4(p):
-    '''expression : unary_expression MODEQUAL comparison_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if p[1]["type"] != t:
-        error(p.lineno(0), "Incompatible types in operation")
-        raise SyntaxError
-    if t[1] == "i32" or t[1] == "i8":
-        op = "srem"
-    elif t[1] == "float":
-        op = "frem"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + p[3]["code"]
-                   + r1 + " = load " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n"
-                   + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
-                   + "store " + p[1]["type"][1] + " " + r2 + ", " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n",
-            "reg" : r2,
-            "addr" : p[1]["addr"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_expression_5(p):
-    '''expression : unary_expression PLUSEQUAL comparison_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if p[1]["type"] != t:
-        error(p.lineno(0), "Incompatible types in operation")
-        raise SyntaxError
-    if t[1] == "i32" or t[1] == "i8":
-        op = "add"
-    elif t[1] == "float":
-        op = "fadd"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + p[3]["code"]
-                   + r1 + " = load " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n"
-                   + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
-                   + "store " + p[1]["type"][1] + " " + r2 + ", " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n",
-            "reg" : r2,
-            "addr" : p[1]["addr"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_expression_6(p):
-    '''expression : unary_expression MINUSEQUAL comparison_expression'''
-    t = getType(p[1]["type"], p[3]["type"], p.lineno(0))
-    if p[1]["type"] != t:
-        error(p.lineno(0), "Incompatible types in operation")
-        raise SyntaxError
-    if t[1] == "i32" or t[1] == "i8":
-        op = "sub"
-    elif t[1] == "float":
-        op = "fsub"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"code" : p[1]["code"] + p[3]["code"]
-                   + r1 + " = load " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n"
-                   + r2 + " = " + op + " " + p[1]["type"][1] + " " + r1 + ", " + p[3]["reg"] + "\n"
-                   + "store " + p[1]["type"][1] + " " + r2 + ", " + p[1]["type"][1] + "* " + p[1]["addr"] + "\n",
-            "reg" : r2,
-            "addr" : p[1]["addr"],
-            "type" : p[1]["type"]}
-    pass
-
-def p_expression_7(p):
     '''expression : comparison_expression'''
     p[0] = {"code" : p[1]["code"], "reg" : p[1]["reg"], "type" : p[1]["type"], "addr" : p[1]["addr"] if "addr" in p[1] else None}
     pass
 
+def p_expression_2(p):
+    '''expression : unary_expression EQUALS comparison_expression'''
+    if p[1]["type"].isArray() or p[3]["type"].isArray():
+        raise NotImplemented
+
+    r3 = p[3]["reg"]
+    code = ""
+    if not p[3]["type"].equals(p[1]["type"]):
+        r3 = newReg()
+        code += convert(op2["reg"], op2["type"], t, r3, p.lineno(0)) #checks types
+
+    p[0] = {"code" : p[1]["code"] + p[3]["code"] + code
+                   + "store " + type2str(p[1]["type"]) + " " + r3 + ", " + type2str(p[1]["type"]) + "* " + p[1]["addr"] + "\n",
+            "reg" : r3,
+            "type" : p[1]["type"]}
+    pass
+
+def p_expression_3(p):
+    '''expression : unary_expression TIMESEQUAL comparison_expression'''
+    p[0] = expressionOperation("*", p[1], p[3], p.lineno(0))
+
+def p_expression_4(p):
+    '''expression : unary_expression DIVEQUAL comparison_expression'''
+    p[0] = expressionOperation("/", p[1], p[3], p.lineno(0))
+
+def p_expression_5(p):
+    '''expression : unary_expression MODEQUAL comparison_expression'''
+    p[0] = expressionOperation("%", p[1], p[3], p.lineno(0))
+
+def p_expression_6(p):
+    '''expression : unary_expression PLUSEQUAL comparison_expression'''
+    p[0] = expressionOperation("+", p[1], p[3], p.lineno(0))
+
+def p_expression_7(p):
+    '''expression : unary_expression MINUSEQUAL comparison_expression'''
+    p[0] = expressionoperation("-", p[1], p[3], p.lineno(0))
+
+#Declarator
+
 def p_declarator_list_1(p):
     '''declarator_list : declarator'''
     p[0] = [p[1]]
-    pass
 
 def p_declarator_list_2(p):
     '''declarator_list : declarator_list COMMA declarator'''
     p[0] = p[1] + [p[2]]
-    pass
 
+#Statement
 
 def p_statement(p):
     '''statement : compound_statement
@@ -983,22 +710,19 @@ def p_statement(p):
                  | jump_statement
                  | declaration_statement'''
     p[0] = {"code" : p[1]["code"]}
-    pass
 
 def p_statement_list_1(p):
     '''statement_list : statement'''
     p[0] = {"code" : p[1]["code"]}
-    pass
 
 def p_statement_list_2(p):
     '''statement_list : statement_list statement'''
     p[0] = {"code" : p[1]["code"] + p[2]["code"]}
-    pass
 
 def p_expression_statement_1(p):
     '''expression_statement : SEMI'''
     p[0] = {"code" : ""}
-    pass
+
 def p_expression_statement_2(p):
     '''expression_statement : expression SEMI'''
     p[0] = {"code" : p[1]["code"], "type" : p[1]["type"], "reg" : p[1]["reg"], "addr" : p[1]["addr"] if "addr" in p[1] else None}
@@ -1013,14 +737,13 @@ def p_selection_statement_1(p):
     p[0] = {"code" :  "br label %" + if_head + "\n"
                     + "\n" + if_head + ":\n"
                     + p[3]["code"] + "\n"
-                    + r + " = icmp ne " + p[3]["type"][1] + " " + p[3]["reg"] + ", 0 \n"
+                    + r + " = icmp ne " + type2str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
                     + "br i1 " + r + ", label %" + if_body + ", label %" + if_exit + "\n"
                     + "\n" + if_body + ":\n"
                     + p[5]["code"]
                     + "br label %" + if_exit + "\n"
                     + "\n" + if_exit + ":\n"
            }
-    pass
 
 def p_selection_statement_2(p):
     '''selection_statement : IF LPAREN expression RPAREN statement ELSE statement'''
@@ -1032,7 +755,7 @@ def p_selection_statement_2(p):
     p[0] = {"code" :  "br label %" + if_head + "\n"
                     + "\n" + if_head + ":\n"
                     + p[3]["code"] + "\n"
-                    + r + " = icmp ne " + p[3]["type"][1] + " " + p[3]["reg"] + ", 0 \n"
+                    + r + " = icmp ne " + type2str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
                     + "br i1 " + r + ", label %" + if_yes + ", label %" + if_no + "\n"
                     + "\n" + if_yes + ":\n"
                     + p[5]["code"]
@@ -1042,10 +765,9 @@ def p_selection_statement_2(p):
                     + "br label %" + if_exit + "\n"
                     + "\n" + if_exit + ":\n"
            }
-    pass
 
 def p_selection_statement_3(p):
-    '''selection_statement : FOR LPAREN expression_statement expression_statement expression RPAREN statement'''
+    '''selection_statement : for_keyword LPAREN expression_statement expression_statement expression RPAREN statement'''
     loop_init = newLab()
     loop_head = newLab()
     loop_body = newLab()
@@ -1058,7 +780,7 @@ def p_selection_statement_3(p):
                      + "br label %" + loop_head + "\n"
                      + "\n" + loop_head + ": \n"
                      + p[4]["code"]
-                     + r + " = icmp ne " + p[4]["type"][1] + " " + p[4]["reg"] + ", 0 \n"
+                     + r + " = icmp ne " + type2str(p[4]["type"]) + " " + p[4]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_body + ": \n"
                      + p[7]["code"]
@@ -1068,7 +790,13 @@ def p_selection_statement_3(p):
                      + "br label %" + loop_head + "\n"
                      + "\n" + loop_exit + ": \n"
            }
-    pass
+
+def p_for_keyword(p):
+    '''for_keyword : FOR'''
+    global compound_statement_open_new_cc
+    cc.new()
+    compound_statement_open_new_cc = False
+    p[0] = {}
 
 def p_iteration_statement_1(p):
     '''iteration_statement : WHILE LPAREN expression RPAREN statement'''
@@ -1079,14 +807,13 @@ def p_iteration_statement_1(p):
     p[0] = {"code" : "br label %" + loop_head + "\n"
                      + "\n" + loop_head + ": \n"
                      + p[3]["code"]
-                     + r + " = icmp ne " + p[3]["type"][1] + " " + p[3]["reg"] + ", 0 \n"
+                     + r + " = icmp ne " + type2str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_body + ": \n"
                      + p[5]["code"] + "\n"
                      + "br label %" + loop_head + "\n"
                      + "\n" + loop_exit + ": \n"
            }
-    pass
 
 def p_iteration_statement_2(p):
     '''iteration_statement : DO statement WHILE LPAREN expression RPAREN SEMI'''
@@ -1100,23 +827,22 @@ def p_iteration_statement_2(p):
                      + "br label %" + loop_tail + "\n"
                      + "\n" + loop_tail + ": \n"
                      + p[5]["code"] + "\n"
-                     + r + " = icmp ne " + p[5]["type"][1] + " " + p[5]["reg"] + ", 0 \n"
+                     + r + " = icmp ne " + type2str(p[5]["type"]) + " " + p[5]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_exit + ": \n"
            }
-    pass
 
 def p_jump_statement_1(p):
     '''jump_statement : RETURN SEMI'''
     p[0] = {"type" : ["v", "void"],
             "code" : "ret void"}
-    pass
 
 def p_jump_statement_2(p):
     '''jump_statement : RETURN expression SEMI'''
     p[0] = {"type" : p[2]["type"],
-            "code" : p[2]["code"] + "ret " + p[2]["type"][1] + " " + p[2]["reg"]}
-    pass
+            "code" : p[2]["code"] + "ret " + type2str(p[2]["type"]) + " " + p[2]["reg"]}
+
+#If no rules have been found
 
 def p_error(p):
     if p:

@@ -269,7 +269,7 @@ def newGBVar():
     GB_NB += 1
     return "@.var" + str(GB_NB)
 
-# convert float to hex
+# Converts float to hex
 import struct
 def float_to_hex(value):
     v = struct.unpack('f', struct.pack('f', value))[0]
