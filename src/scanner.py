@@ -111,7 +111,7 @@ for r in reserved:
 
 
 def t_ID(t):
-    r'[A-Za-z_][\w_]*'
+    r'[A-Za-z_][A-Za-z0-9_]*'
     t.type = reserved_map.get(t.value,"ID")
     return t
 

@@ -38,9 +38,13 @@ checkGenericErrors(cc, result)
 
 # save result
 if result is None:
-    sys.stderr.write("Code production canceled\n")
+    sys.stderr.write(bcolors.FAIL + "Code production canceled\n" + bcolors.ENDC)
 else:
     print("\n        ===== CODE =====\n")
+    print(generateArrayType(cc))
     print(result["code"])
     with open("./" + sys.argv[2], "w") as f:
-	    f.write(result["code"])
+        f.write("; Array types\n")
+        f.write(generateArrayType(cc))
+        f.write("\n; Main segment\n")
+        f.write(result["code"])
