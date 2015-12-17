@@ -35,76 +35,141 @@ def internal_error(lineno, msg):
 
 
 
-#class Type:
-#    '''A generic class to decribe types'''
-#    def isValue(self):
-#        return False
-#
-#    def isArray(self):
-#        return False
-#
-#    def isFunction(self):
-#        return False
-#
-#
-#class ValueType(Type):
-#    '''A class to decribe primary types'''
-#    def __init__(self, t = -1):
-#        self.t = t
-#
-#    def isValue(self):
-#        return True
-#
-#    def isDefined(self):
-#        return self.t != -1
-#
-#    def __str__(self):
-#        try:
-#            return ["void","i32","i8","float"][self.t]
-#        except IndexError:
-#            raise TypeError
-#
-#ValueType.UNDEF = ValueType(-1)
-#ValueType.VOID  = ValueType(0)
-#ValueType.INT   = ValueType(1)
-#ValueType.CHAR  = ValueType(2)
-#ValueType.FLOAT = ValueType(3)
-#
-#
-#class FunctionType(Type):
-#    '''A class to decribe function types'''
-#    def __init__(self, ret = ValueType.VOID, args = []):
-#        self.r = ret
-#        self.a = args # list
-#
-#    def isFunction(self):
-#        return True
-#
-#    def setReturnType(self, t):
-#        self.r = t
-#
-#    def getReturnType(self):
-#        return self.r
-#
-#    def setArgType(selfi, t):
-#        if 0 <= i and i < len(self.a):
-#            self.a[i] = t
-#        elif i == len(self.a):
-#            self.a.append(t)
-#        else:
-#            raise IndexError
-#
-#    def getArgType(self, i):
-#        return self.a[i]
-#
-#    def __str__(self):
-#        return self.r + "(" + ", ".join(self.a) + ")" # with a trailing * ?
-#
-#
-#class ArrayType(Type):
-#    '''A generic class to decribe types'''
-#    def isArray(self):
-#        return True
+class Type:
+    '''A generic class to decribe types'''
+    def isValue(self):
+        return False
+
+    def isArray(self):
+        return False
+
+    def isFunction(self):
+        return False
+
+    def getOpResultType(self, arg2):
+        '''returns the type of the return value of a two-variable operation (*, +, /, -)
+        between self and arg2.'''
+        return None # because it is not generally defined
+
+    def equals(t2):
+        return False
+
+
+class ValueType(Type):
+    '''A class to decribe primary types'''
+    def __init__(self, t = -1):
+        self.t = t
+
+    def isValue(self):
+        return True
+
+    def isDefined(self):
+        return self.t != -1
+
+    def equals(t2):
+        if t2.isValue():
+            return self.t == t2.t
+        else:
+            return False
+
+    def __str__(self):
+        '''returns IR of type'''
+        try:
+            return ["void","i32","i8","float"][self.t]
+        except IndexError:
+            raise TypeError # type is None or undefined
+
+    def getOpResultType(self, arg2):
+        '''returns the type of the return value of a two-variable operation (*, +, /, -)
+        between self and arg2.'''
+        if not arg2.isValue():
+            return None
+        else:
+            checkTable = [
+            # void, int,  char, float
+            [0,     0,    0,    0], # 0=void
+            [0,     1,    1,    3], # 1=int
+            [0,     1,    2,    3], # 2=char
+            [0,     3,    3,    3]  # 3=float
+            ]
+            return ValueType(checkTable[self.t][arg2.t])
+
+
+ValueType.VOID  = ValueType(0)
+ValueType.INT   = ValueType(1)
+ValueType.CHAR  = ValueType(2)
+ValueType.FLOAT = ValueType(3)
+
+
+class FunctionType(Type):
+    '''A class to decribe function types'''
+    def __init__(self, ret = ValueType.VOID, args = []):
+        self.r = ret
+        self.a = args # list
+
+    def isFunction(self):
+        return True
+
+    def setReturnType(self, t):
+        self.r = t
+
+    def getReturnType(self):
+        return self.r
+
+    def getArgsCount():
+        return len(self.a)
+
+    def setArgType(self, i, t):
+        if 0 <= i and i < len(self.a):
+            self.a[i] = t
+        elif i == len(self.a):
+            self.a.append(t)
+        else:
+            raise IndexError
+
+    def getArgType(self, i):
+        return self.a[i]
+
+    def equals(t2):
+        if t2.isFunction():
+            if not self.getReturnType().equals(t2.getReturnType()):
+                return False
+            if self.getArgsCount() != t2.getArgsCount():
+                return False
+            for arg_t1, arg_t2 in zip(self.a, t2.a):
+                if not arg_t1.equals(arg_t2):
+                    return False
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return self.r + "(" + ", ".join(self.a) + ")*"
+
+
+class ArrayType(Type):
+    '''A generic class to decribe types'''
+    def __init__(self, elt):
+        self.elt = elt
+
+    def isArray(self):
+        return True
+
+    def setElementsType(self, t):
+        self.elt = t
+
+    def getElementsType(self):
+        return self.elt
+
+    def equals(t2):
+        if t2.isArray():
+            return self.elt.equals(t2.elt)
+        else:
+            return False
+
+    def __str__(self):
+        global cc
+        return cc.array_types[str(self.elt)]
 
 
 
@@ -126,6 +191,8 @@ class Context:
         self.id_type = {}
         self.id_addr = {}
         self.glob = self if c is None else c.glob
+        self.array_types = {}
+        self.array_types_counter = 0
 
     def getParent(self):
         '''returns the surrounding context'''
@@ -159,6 +226,10 @@ class Context:
 
     def setType(self, id, t):
         '''sets the type of id in current context to t'''
+        if t.isArray():
+            if not str(t) in self.array_types:
+                self.array_types[str(t.elt)] = "%array" + str(self.array_types_counter)
+                self.array_types_counter += 1
         self.id_type[id] = t
 
     def getAddr(self, id):
@@ -222,31 +293,25 @@ def type2str(t):
             return type2str(t[1][0]) + "(*)()"
 
 
-def isValue(t):
-    '''tells if t is a value type'''
-    return t[0] == "v"
+#def isValue(t):
+#    '''tells if t is a value type'''
+#    return t[0] == "v"
+#
+#def isArray(t):
+#    '''tells if t is an array type'''
+#    return t[0] == "a"
+#
+#def isFunction(t):
+#    '''tells if t is a function type'''
+#    return t[0] == "f"
 
-def isArray(t):
-    '''tells if t is an array type'''
-    return t[0] == "a"
 
-def isFunction(t):
-    '''tells if t is a function type'''
-    return t[0] == "f"
+def generateArrayType(context):
+    '''returns the code defining the array types'''
+    code = ""
+    for elt_type, type_name in context.array_types.items():
+        code += type_name + " = type { i32, " + elt_type + " }\n"
 
-
-# Types checking
-def getType(t1, t2, l):
-    '''returns the type of the return value of a two-variable operation (*, +, /, -)
-       the types in the checkTable are in order : "INT", "FLOAT", "CHAR", None'''
-    checkTable = {}
-    checkTable["i32"] = {"i32" : "i32", "float" : "float", "i8" : "i32", "void" : None, None : None}
-    checkTable["float"] = {"i32" : "float", "float" : "float", "i8" : "float", "void" : None, None : None}
-    checkTable["i8"] = {"i32" : "i32", "float" : "float", "i8" : "i8", "void" : None, None : None}
-    checkTable[None] = {"i32" : None, "float" : None, "i8" : None, "void" : None, None : None}
-    if t1[0] != "v" or t2[0] != "v" or checkTable[t1[1]][t2[1]] is None:
-        error(l, "Incompatible types in operation. Found '" + type2str(t1) + "' and '" + type2str(t2) + "'")
-    return ["v", checkTable[t1[1]][t2[1]]]
 
 # Label generation
 LAB_NB = 0

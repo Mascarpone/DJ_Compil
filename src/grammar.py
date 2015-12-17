@@ -12,6 +12,7 @@ from ply import yacc as yacc
 
 # var table
 cc = Context()
+compound_statement_open_new_cc = True  # set it to False to prevent compound_statement from opening a new cc
 
 
 # first rule because it's the starting symbol
@@ -36,181 +37,199 @@ def p_external_declaration_2(p):
 
 def p_external_declaration_3(p):
     '''external_declaration : EXTERN declaration_statement'''
-    p[0] = {"code" : ""}
+    #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
+    p[0] = {"code" : "; declare external global " + p[2]["code"]}
 
 def p_external_declaration_4(p):
     '''external_declaration : EXTERN type_name function_declarator arguments_declaration SEMI'''
-    # function_declarator open a new context that must be closed
+    # function_declarator opens a new context that must be closed
     cc.close()
     # now back in global context:
-    cc.setType(p[3]["name"], ["f", [p[2]["type"]]+p[4]["type"]])
-    p[0] = {"code" : "declare " + p[2]["code"] + " @" + p[3]["name"] + "(" + p[4]["code"] + ")"}
+    cc.setType(p[3]["name"], FunctionType(p[2]["type"], p[3]["type"]))
+    p[0] = {"code" : "declare " + str(p[2]["type"]) + " @" + p[3]["name"] + "(" + p[4]["code"] + ")"}
     pass
 
 def p_function_definition(p):
     '''function_definition : type_name function_declarator arguments_declaration compound_statement'''
+    if p[2]["name"] in reserved:
+        error(p.lineno(2), "'"+p[2]["name"]+"' is a reseved keyword")
     if cc.exists(p[2]["name"]):
         warning(p.lineno(2), "You are redefining '"+p[2]["name"]+"'")
-    elif p[2]["name"] in reserved:
-        error(p.lineno(2), "'"+p[2]["name"]+"' is a reseved keyword")
     cc.close()
-    cc.setType(p[2]["name"], ["f", [p[1]["type"]]+p[3]["type"]])
+    cc.setType(p[2]["name"], FunctionType(p[1]["type"], p[3]["type"]))
 
-    code = "define " + p[1]["code"] + " @" + p[2]["name"] + "(" + p[3]["code"] + ") {\n"
+    code = "define " + str(p[1]["type"]) + " @" + p[2]["name"] + "(" + p[3]["code"] + ") {\n"
     code += p[3]["init"]
-    code += p[4]["code"] + "\n}\n"
-
+    code += p[4]["code"]
+    code += "\n}\n"
     p[0] = {"code" : code}
-    pass
+
 
 def p_function_declarator(p):
     '''function_declarator : ID'''
     cc.new()
+    compound_statement_open_new_cc = False  # prevent compound statement from opening a new cc
     p[0] = {"name" : p[1]}
-    pass
+
 
 def p_arguments_declaration_1(p):
     '''arguments_declaration : LPAREN parameter_list RPAREN'''
-    init = ""
-    for t, n in zip(p[2]["type"], p[2]["name"]):
-        cc.setType(n, t)
-        cc.setAddr(n, "%" + n[0])
-        init += "%" + n + " = alloca " + t[1] + "\n"
-        init += "store " + t[1] + " %" + n + "arg, " + t[1] + "* %" + n + "\n"
     p[0] = {"type" : p[2]["type"],
             "code" : p[2]["code"],
-            "init" : init}
-    pass
+            "init" : p[2]["init"]}
+
 
 def p_arguments_declaration_2(p):
     '''arguments_declaration : LPAREN RPAREN'''
     p[0] = {"type" : [],
             "code" : "",
             "init" : ""}
-    pass
+
 
 def p_parameter_list_1(p):
     '''parameter_list : parameter_declaration'''
     p[0] = {"type" : [p[1]["type"]],
             "code" : p[1]["code"],
-            "name" : [p[1]["name"]]}
-    pass
+            "init" : p[1]["init"]}
+
 
 def p_parameter_list_2(p):
     '''parameter_list : parameter_list COMMA parameter_declaration'''
     p[0] = {"type" : p[1]["type"] + [p[3]["type"]],
             "code" : p[1]["code"] + ", " + p[3]["code"],
-            "name" : p[1]["name"] + [p[3]["name"]]}
-    pass
+            "init" : p[1]["init"] + p[3]["init"]}
+
 
 def p_parameter_declaration(p):
     '''parameter_declaration : type_name ID'''
+    if p[2] in reserved:
+        error(p.lineno(2), "'" + p[2] + "' is a reseved keyword")
     if cc.exists(p[2]):
         warning(p.lineno(2), "You are redefining '" + p[2] + "'")
+    t = p[1]["type"]
+    r = newReg()      # mutable var to use inside the function
+    r_a = r + ".arg"  # argument of the function. not mutable
+    init = r + " = alloca " + str(t) + "\n" # code to build the mutable argument
     cc.setType(p[2], p[1]["type"])
+    cc.setAddr(p[2], r)
+    if t.isValue() or t.isFunction():
+        init += "store " + str(t) + " " + r_a + ", " + str(t) + "* " + r + "\n" # copy value
+    elif t.isArray():
+        raise NotImplemented
+        # TODO: copy struct entries
+        init += "getelementptr ... \n"
+    else:
+        raise TypeError
+    init = ""
+    p[0] = {"type" : t,
+            "code" : str(t) + " " + r_a,
+            "init" : init}
 
-    p[0] = {"type" : p[1]["type"],
-            "code" : p[1]["code"] + " %" + p[2] + "arg",
-            "name" : p[2]}
-    pass
 
 def p_type_name_1(p):
     '''type_name : VOID'''
-    p[0] = {"type" : ["v", "void"],
-            "code" : "void"}
-    pass
+    p[0] = {"type" : ValueType.VOID}
+
 
 def p_type_name_2(p):
     '''type_name : CHAR'''
-    p[0] = {"type" : ["v", "i8"],
-            "code" : "i8"}
-    pass
+    p[0] = {"type" : ValueType.CHAR}
+
 
 def p_type_name_3(p):
     '''type_name : INT'''
-    p[0] = {"type" : ["v", "i32"],
-            "code" : "i32"}
-    pass
+    p[0] = {"type" : ValueType.INT}
+
 
 def p_type_name_4(p):
     '''type_name : FLOAT'''
-    p[0] = {"type" : ["v", "float"],
-            "code" : "float"}
-    pass
+    p[0] = {"type" : ValueType.FLOAT}
 
-def p_type_name_5(p):
-    '''type_name : type_name LBRACKET RBRACKET
-                 | type_name LBRACKET ICONST RBRACKET'''
-    p[0] = {"type" : ["a", p[1]["type"]],
-            "code" : p[1]["code"] + "[]"}
-    pass
+
+def p_type_name_5_1(p):
+    '''type_name : type_name LBRACKET RBRACKET'''
+    p[0] = {"type" : ArrayType(p[1]["type"]),
+            "size" : None}
+
+
+def p_type_name_5_2(p):
+    '''type_name : type_name LBRACKET ICONST RBRACKET'''
+    p[0] = {"type" : ArrayType(p[1]["type"]),
+            "size" : int(p[3])}
+
 
 def p_type_name_6(p):
-    '''type_name : type_name LPAREN TIMES RPAREN LPAREN type_list RPAREN''' # int(*)(int,char)
-    p[0] = {"type" : ["f", [p[1]["type"]]+p[6]["type"] ],
-            "code" : "function_type1"}
-    pass
+    '''type_name : type_name LPAREN type_list RPAREN''' # int(int,char)
+    p[0] = {"type" : FunctionType(p[1]["type"], p[3]["type"])}
+
 
 def p_type_name_7(p):
-    '''type_name : type_name LPAREN TIMES RPAREN LPAREN RPAREN''' # int(*)()
-    p[0] = {"type" : ["f", [p[1]["type"]] ],
-            "code" : "function_type2"}
-    pass
+    '''type_name : type_name LPAREN RPAREN''' # int()
+    p[0] = {"type" : FunctionType(p[1]["type"], [])}
+
 
 def p_type_list_1(p):
     '''type_list : type_name'''
-    p[0] = {"type" : [p[1]["type"]],
-            "code" : p[1]["code"]}
-    pass
+    p[0] = {"type" : [p[1]["type"]]}
+
 
 def p_type_list_2(p):
     '''type_list : type_list COMMA type_name'''
-    p[0] = {"type" : p[1]["type"] + [p[3]["type"]],
-            "code" : p[1]["code"] + ", " + p[3]["code"]}
-    pass
+    p[0] = {"type" : p[1]["type"] + [p[3]["type"]]}
+
+
+def p_compound_statement_begin(p):
+    '''compound_statement_begin : LBRACE'''
+    global compound_statement_open_new_cc
+    if compound_statement_open_new_cc:
+        cc.new()
+    else:
+        compound_statement_open_new_cc = True
+    p[0] = {}
+
 
 def p_compound_statement_1(p):
-    '''compound_statement : LBRACE RBRACE'''
+    '''compound_statement : compound_statement_begin RBRACE'''
     p[0] = {"code" : ""}
-    pass
+
 
 def p_compound_statement_2(p):
-    '''compound_statement : LBRACE statement_list RBRACE'''
+    '''compound_statement : compound_statement_begin statement_list RBRACE'''
     p[0] = {"code" : p[2]["code"]}
-    pass
 
 
 def p_declaration_1(p):
     '''declaration_statement : type_name declarator_list SEMI'''
     code = ""
-    for d in p[2]: # is a declarator
-        if cc.exists(d["name"]):
-            warning(p.lineno(2), "You are redefining " + d["name"]);
-        reg = newReg()
-        code += reg + " = alloca " + p[1]["code"] + "\n"
-        cc.setType(d["name"], p[1]["type"])
-        cc.setAddr(d["name"], reg)
-        if d["code"] is not None:
-            code += d["code"]
-            code += "store " + p[1]["code"] + " " + d["reg"] + ", " + p[1]["code"] + "* " + reg + "\n"
+    if True:#p[1]["type"].isValue() or p[1]["type"].isFunction():
+        for d in p[2]: # is a declarator
+            if cc.exists(d["name"]):
+                warning(p.lineno(2), "You are redefining " + d["name"]);
+            reg = newReg()
+            code += reg + " = alloca " + str(p[1]["type"]) + "\n"
+            cc.setType(d["name"], p[1]["type"])
+            cc.setAddr(d["name"], reg)
+            if d["code"] is not None:
+                code += d["code"]
+                code += "store " + str(p[1]["type"]) + " " + d["reg"] + ", " + str(p[1]["type"]) + "* " + reg + "\n"
+    else:
+        raise NotImplemented
     p[0] = {"code" : code,
             "type" : p[1]["type"]}
-    pass
+
 
 def p_declarator_1(p):
     '''declarator : ID'''
-    r = "0" #default value ??
     p[0] = {"name" : p[1],
-            "reg" : r,
+            "reg" : None,
             "code" : ""}
-    pass
+
 
 def p_declarator_2(p):
     '''declarator : ID EQUALS primary_expression'''
     p[0] = {"name" : p[1],
             "reg" : p[3]["reg"],
             "code" : p[3]["code"]}
-    pass
 
 
 def p_primary_expression_id(p):
@@ -295,27 +314,41 @@ def p_primary_expression_id_paren(p):
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
     t = cc.getType(p[1])
     if not isFunction(t):
-        error(p.lineno(p[1]), "You are trying to call '" + p[1] + "', which is not a function.")
+        error(p.lineno(1), "You are trying to call '" + p[1] + "', which is not a function.")
+    if len(t[1]) - 1 != len(p[3]):
+        error(p.lineno(1), "Invalid number of arguments. Got " +  + " expected " + (len(t[1]) - 1) + ".")
 
-
-    if t[1][0][1] == "void":
-        code = "call " + t[1][0][1] + " @" + p[1] + "()" + "\n"
-        reg = None
-    else:
+    # call function
+    code = "call " + t[1][0] + " @" + p[1] + "()" + "\n"
+    reg = None
+    # store result if any
+    if t[1][0] != "void":
         r1 = newReg()
-        code = r1 + " = call " + t[1][0][1] + " @" + p[1] + "()" + "\n"
+        code = r1 + " = " + code
         reg = r1
-    p[0] = {"type" : t, "code" : code, "reg" : reg}
-    pass
+    p[0] = {"type" : t[1][0], "code" : code, "reg" : reg}
+
 
 def p_primary_expression_id_paren_args(p):
     '''primary_expression : ID LPAREN argument_expression_list RPAREN'''
     if not cc.exists(p[1]):
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
     t = cc.getType(p[1])
+    if not isFunction(t):
+        error(p.lineno(1), "You are trying to call '" + p[1] + "', which is not a function.")
+    if len(t[1]) - 1 != len(p[3]):
+        error(p.lineno(1), "Invalid number of arguments. Got " +  + " expected " + (len(t[1]) - 1) + ".")
 
-    code = p[3]["code"]
-    if t[1][0][1] == "void":
+    #code = p[3]["code"]
+    code = []
+    for arg_reg, arg_t, expected_t in zip(p[3]["reg"], p[3]["type"], t[1][1:]):
+
+        code.append(arg_reg)
+
+
+
+
+    if t[1][0] == "void":
         code += "call " + t[1][0][1] + " @" + p[1] + "("
         for r, ty in zip(p[3]["reg"], p[3]["type"]):
             if ty[0] == "v":
