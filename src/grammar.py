@@ -213,26 +213,56 @@ def p_compound_statement_2(p):
 def p_declaration_1(p):
     '''declaration_statement : type_name declarator_list SEMI'''
     global cc
+    t = p[1]["type"]
     code = ""
-    if True:#p[1]["type"].isValue() or p[1]["type"].isFunction():
-        for d in p[2]: # is a declarator
-            if cc.exists(d["name"]):
-                warning(p.lineno(2), "You are redefining " + d["name"]);
-            reg = newReg()
-            cc.setType(d["name"], p[1]["type"])
-            cc.setAddr(d["name"], reg)
-            code += reg + " = alloca " + str(p[1]["type"]) + "\n"
-            if d["code"] is not None:
-                code += d["code"]
-                code += "store " + str(p[1]["type"]) + " " + d["reg"] + ", " + str(p[1]["type"]) + "* " + reg + "\n"
-            else:
-                if p[1]["type"].isValue():
-                    code += "store " + str(p[1]["type"]) + " 0, " + str(p[1]["type"]) + "* " + reg + "\n"
-                #TODO : initialize
-    else:
-        raise NotImplemented
+    for d in p[2]: # is a declarator
+        if cc.exists(d["name"]):
+            warning(p.lineno(2), "You are redefining " + d["name"]);
+        reg = newReg()
+        cc.setType(d["name"], t)
+        cc.setAddr(d["name"], reg)
+        code += reg + " = alloca " + str(t) + "\n"
+        if d["code"] is not None:
+            if not d["type"].equals(t):
+                error(p.lineno(0), "Incompatible types in declaration. Expected '" + type2str(t) + "' but got '" + type2str(d["type"]) + "'.")
+            code += d["code"]
+            if t.isValue() or t.isFunction():
+                code += "store " + str(d["type"]) + " " + d["reg"] + ", " + str(t) + "* " + reg + "\n"
+            elif t.isArray():
+                reg_res = newReg()
+                code += reg_res + " = load " + str(d["type"]) + "* " + d["reg"] + "\n"
+                code += "store " + str(d["type"]) + " " + reg_res + ", " + str(t) + "* " + reg + "\n"
+                # copy size entry
+                #reg_size_res_ptr = newReg()
+                #code += reg_size_ptr + " = getelementptr " + str(d["type"]) + "* " + d["reg"] + ", i32 0, i32 0\n"
+                #reg_size_res = newReg()
+                #code += "load i32* " + reg_size_res_ptr + "\n"
+                #reg_size_ptr = newReg()
+                #code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
+                #code += "store i32 " + reg_size + ", i32* " + reg_size_ptr + "\n"
+                # copy buffer entry
+        else:
+            if t.isValue():
+                code += "store " + str(t) + " 0, " + str(t) + "* " + reg + "\n"
+            elif t.isFunction():
+                code += "store " + str(t) + " null, " + str(t) + "* " + reg + "\n"
+            elif t.isArray():
+                # set size to 0
+                reg_size_ptr = newReg()
+                code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
+                if p[1]["size"] is None:
+                    code += "store i32 0, i32* " + reg_size_ptr + "\n"
+                else:
+                    code += "store i32 " + str(p[1]["size"]) + ", i32* " + reg_size_ptr + "\n"
+                    allocated_buff = newReg()
+                    code += allocated_buff + " = call i8* @malloc(i64 " + str(sizeof(t.getElementsType()) * p[1]["size"]) + ")\n"
+                    cast_allocated = newReg()
+                    code += cast_allocated + " = bitcast i8* " + allocated_buff + " to " + str(t.getElementsType()) + "*\n"
+                    reg_buff_ptr = newReg()
+                    code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
+                    code += "store " + str(t.getElementsType()) + "* " + cast_allocated + ", " + str(t.getElementsType()) + "** " + reg_buff_ptr + "\n"
     p[0] = {"code" : code,
-            "type" : p[1]["type"]}
+            "type" : t}
 
 
 def p_declarator_1(p):
@@ -340,7 +370,11 @@ def p_primary_expression_size(p):
     # int s = size(T[] a)
     if not p[3]["type"].isArray():
         error(p.lineno(3), "Argument of function 'size()' is expected to be an array. Got a '" + type2str(p[3]["type"]) + "'.")
-    p[0] = {"type" : ValueType.INT, "code" : "; primary_expression_size", "reg" : "registre"}
+    size_ptr = newReg()
+    code = r + " = getelementptr " + str(p[3]["type"]) + "* " + p[3]["reg"] + ", i32 0, i32 0\n"
+    size = newReg()
+    code += size + " = load i32* " + size_ptr + "\n"
+    p[0] = {"type" : ValueType.INT, "code" : code, "reg" : size}
 
 
 def p_primary_expression_map(p):

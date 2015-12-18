@@ -323,12 +323,12 @@ class Context:
             code += text_var + " = internal constant [" + str(l) + " x i8] c\"" + text + "\"\n"
         return code
 
-    def generateArrayType(context):
-    '''returns the code defining the array types'''
-    code = ""
-    for elt_type, type_name in context.array_types.items():
-        code += type_name + " = type { i32, " + elt_type + " }\n"
-    return code
+    def generateArrayType(self):
+        '''returns the code defining the array types'''
+        code = ""
+        for elt_type, type_name in self.array_types.items():
+            code += type_name + " = type { i32, " + elt_type + "* }\n"
+        return code
 
 
 
@@ -352,6 +352,15 @@ def newGBVar():
     global GB_NB
     GB_NB += 1
     return "@gbvar" + str(GB_NB)
+
+
+def sizeof(t):
+    '''return the size of an element of type t'''
+    if t.isArray() or t.isFunction(): # it's a pointer
+        return 8
+    elif t.isValue():
+        return [None, 4, 1, 4][t.t]
+
 
 # Converts float to hex
 import struct

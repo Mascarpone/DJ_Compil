@@ -41,9 +41,11 @@ if result is None:
     sys.stderr.write(bcolors.FAIL + "Code production canceled\n" + bcolors.ENDC)
 else:
     print("\n        ===== CODE =====\n")
-    print(generateArrayType(cc))
+    print(cc.generateText())
+    print(cc.generateArrayType())
     print(result["code"])
     with open("./" + sys.argv[2], "w") as f:
+        f.write("declare i8* @malloc(i64)")
         seg = cc.generateText()
         if seg != "":
             f.write("; Constant text\n")

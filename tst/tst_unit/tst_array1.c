@@ -14,13 +14,15 @@
 
 int main()
 {
-    int A[3];
-    A[0] = 1;
+    int[3] A;
+    int[5] B;
+    
+    /*A[0] = 1;
     A[1] = 2;
     A[2] = 3;
     if(A[0] == 1 && A[1] == 2 && A[2] == 3)
         print("OK\n");
     else
-        print("C'est moche...\n");
+        print("C'est moche...\n");*/
     return 0;
 }
