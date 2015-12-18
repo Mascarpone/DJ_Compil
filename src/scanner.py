@@ -12,7 +12,7 @@ from ply import lex as lex
 reserved = (
     'VOID', 'CHAR', 'INT', 'FLOAT',
     'EXTERN',
-    'MAP', 'REDUCE',
+    'MAP', 'REDUCE', 'SIZE',
     'IF', 'ELSE',
     'FOR', 'WHILE', 'DO',
     #'BREAK', 'CONTINUE',

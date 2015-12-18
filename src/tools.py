@@ -51,7 +51,7 @@ class Type:
         between self and arg2.'''
         return None # because it is not generally defined
 
-    def equals(t2):
+    def equals(self, t2):
         return False
 
 
@@ -66,7 +66,7 @@ class ValueType(Type):
     def isDefined(self):
         return self.t != -1
 
-    def equals(t2):
+    def equals(self, t2):
         if t2.isValue():
             return self.t == t2.t
         else:
@@ -130,7 +130,7 @@ class FunctionType(Type):
     def getArgType(self, i):
         return self.a[i]
 
-    def equals(t2):
+    def equals(self, t2):
         if t2.isFunction():
             if not self.getReturnType().equals(t2.getReturnType()):
                 return False
@@ -149,7 +149,8 @@ class FunctionType(Type):
 
 class ArrayType(Type):
     '''A generic class to decribe types'''
-    def __init__(self, elt):
+    def __init__(self, elt, cc):
+        self.cc = cc
         self.elt = elt
 
     def isArray(self):
@@ -161,15 +162,14 @@ class ArrayType(Type):
     def getElementsType(self):
         return self.elt
 
-    def equals(t2):
+    def equals(self, t2):
         if t2.isArray():
             return self.elt.equals(t2.elt)
         else:
             return False
 
     def __str__(self):
-        global cc
-        return cc.array_types[str(self.elt)]
+        return self.cc.array_types[str(self.elt)]
 
 
 
@@ -193,6 +193,10 @@ class Context:
         self.glob = self if c is None else c.glob
         self.array_types = {}
         self.array_types_counter = 0
+        self.compound_statement_open_new_cc = True  # set it to False to prevent compound_statement from opening a new cc
+        self.return_types_found = []                # used to check if returned values have a good type
+
+
 
     def getParent(self):
         '''returns the surrounding context'''
@@ -227,7 +231,7 @@ class Context:
     def setType(self, id, t):
         '''sets the type of id in current context to t'''
         if t.isArray():
-            if not str(t) in self.array_types:
+            if not str(t.elt) in self.array_types:
                 self.array_types[str(t.elt)] = "%array" + str(self.array_types_counter)
                 self.array_types_counter += 1
         self.id_type[id] = t
@@ -245,13 +249,37 @@ class Context:
         '''sets the register in which id is allocated to a'''
         self.id_addr[id] = a
 
+    def unactivateOpenNewContext(self):
+        '''Sets compound_statement_open_new_cc to false to prevent compound_statement from opening a new context'''
+        self.compound_statement_open_new_cc = False
+
+    def activateOpenNewContext(self):
+        '''Sets compound_statement_open_new_cc to true to allow compound_statement to open a new context'''
+        self.compound_statement_open_new_cc = True
+
+    def compoundStatementOpenNewContext(self):
+        '''returns compound_statement_open_new_cc'''
+        return self.compound_statement_open_new_cc
+
+    def addReturnType(self, t):
+        '''sets return_types_found to check return types'''
+        self.return_types_found.append(t)
+
+    def getReturnTypes(self):
+        '''returns return_types_found'''
+        return self.return_types_found
+
+    def resetReturnTypes(self):
+        '''reset the list of return types found to []'''
+        self.return_types_found = []
+
     def new(self):
         '''Sets current context as a new context with the previous surrounding context as parent.
         e.g. when entering a { ... } block'''
         nc = Context()
         nc.prev = self.prev
         nc.id_type = self.id_type
-        nc.addr = self.id_addr
+        nc.id_addr = self.id_addr
         self.prev = nc
         self.id_type = {}
         self.id_addr = {}
@@ -281,16 +309,15 @@ class Context:
 
 def type2str(t):
     '''prints the type t as a string in dj coding convention'''
-    if t[0] == "v":
-        d = {"i32" : "int", "i8" : "char", "float" : "float", "void" : "void"}
-        return d[t[1]]
-    elif t[0] == "a":
-        return type2str(t[1]) + "[]"
-    elif t[0] == "f":
-        if len(t[1]) > 1:
-            return type2str(t[1][0]) + "(*)(" + ", ".join(map(type2str, t[1][1:])) + ")"
+    if t.isValue():
+        return ["void", "int", "char", "float"][t.t]
+    elif t.isArray():
+        return type2str(t.getElementsType()) + "[]"
+    elif t.isFunction():
+        if len(t.getArgsCount()) > 0:
+            return type2str(t.getReturnType()) + "(" + ", ".join(map(type2str, t.a)) + ")"
         else:
-            return type2str(t[1][0]) + "(*)()"
+            return type2str(t.getReturnType()) + "()"
 
 
 #def isValue(t):
@@ -332,7 +359,7 @@ GB_NB = 0
 def newGBVar():
     global GB_NB
     GB_NB += 1
-    return "@.var" + str(GB_NB)
+    return "@str" + str(GB_NB)
 
 # Converts float to hex
 import struct
