@@ -566,8 +566,6 @@ def p_unary_expression_5(p):
             }
 
 
-# >>>> Rangé à partir d'ici >>>>
-
 # Operations
 
 def convert(reg, tbefore, tafter, newreg, lineno):
