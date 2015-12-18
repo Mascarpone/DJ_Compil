@@ -44,7 +44,13 @@ else:
     print(generateArrayType(cc))
     print(result["code"])
     with open("./" + sys.argv[2], "w") as f:
-        f.write("; Array types\n")
-        f.write(generateArrayType(cc))
+        seg = cc.generateText()
+        if seg != "":
+            f.write("; Constant text\n")
+            f.write(seg)
+        at = cc.generateArrayType()
+        if at != "":
+            f.write("; Array types\n")
+            f.write(at)
         f.write("\n; Main segment\n")
         f.write(result["code"])

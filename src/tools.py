@@ -172,6 +172,18 @@ class ArrayType(Type):
         return self.cc.array_types[str(self.elt)]
 
 
+def type2str(t):
+    '''prints the type t as a string in dj coding convention'''
+    if t.isValue():
+        return ["void", "int", "char", "float"][t.t]
+    elif t.isArray():
+        return type2str(t.getElementsType()) + "[]"
+    elif t.isFunction():
+        if len(t.getArgsCount()) > 0:
+            return type2str(t.getReturnType()) + "(" + ", ".join(map(type2str, t.a)) + ")"
+        else:
+            return type2str(t.getReturnType()) + "()"
+
 
 
 # ids and their corresponding types
@@ -195,7 +207,8 @@ class Context:
         self.array_types_counter = 0
         self.compound_statement_open_new_cc = True  # set it to False to prevent compound_statement from opening a new cc
         self.return_types_found = []                # used to check if returned values have a good type
-
+        self.text = {}
+        self.text_counter = 0
 
 
     def getParent(self):
@@ -295,49 +308,26 @@ class Context:
             self.id_addr = self.prev.id_addr
             self.prev = self.prev.prev
 
+    def addText(self, text):
+        '''adds a new constant string'''
+        if not text in self.text:
+            self.text[text] = "@str" + str(self.text_counter)
+            self.text_counter += 1
+        return self.text[text]
 
-# A type is a list
-# the first element tells if it's a simple value (i32, float, i8), an array, or a function
-#   - "v" : simple value
-#   - "a" : array
-#   - "f" : function
-# the second element is the type of the element
-#   - if it's a value the type is a string representing the type
-#   - if it's a 1D array, the type is a string representing the type of the elements, if it's a 2D+ array, it's a new list describing the sub-array
-#   - if it's a function, the type is a function with first element as return type, and others elements as arguments.
+    def generateText(self):
+        '''returns the code defining the constant strings'''
+        code = ""
+        for text, text_var in self.text.items():
+            l = len(text) - 2
+            code += text_var + " = internal constant [" + str(l) + " x i8] c" + text + "\n"
+        return code
 
-
-def type2str(t):
-    '''prints the type t as a string in dj coding convention'''
-    if t.isValue():
-        return ["void", "int", "char", "float"][t.t]
-    elif t.isArray():
-        return type2str(t.getElementsType()) + "[]"
-    elif t.isFunction():
-        if len(t.getArgsCount()) > 0:
-            return type2str(t.getReturnType()) + "(" + ", ".join(map(type2str, t.a)) + ")"
-        else:
-            return type2str(t.getReturnType()) + "()"
-
-
-#def isValue(t):
-#    '''tells if t is a value type'''
-#    return t[0] == "v"
-#
-#def isArray(t):
-#    '''tells if t is an array type'''
-#    return t[0] == "a"
-#
-#def isFunction(t):
-#    '''tells if t is a function type'''
-#    return t[0] == "f"
-
-
-def generateArrayType(context):
-    '''returns the code defining the array types'''
-    code = ""
-    for elt_type, type_name in context.array_types.items():
-        code += type_name + " = type { i32, " + elt_type + " }\n"
+    def generateArrayType(self):
+        '''returns the code defining the array types'''
+        code = ""
+        for elt_type, type_name in self.array_types.items():
+            code += type_name + " = type { i32, " + elt_type + " }\n"
 
 
 # Label generation
@@ -359,7 +349,7 @@ GB_NB = 0
 def newGBVar():
     global GB_NB
     GB_NB += 1
-    return "@str" + str(GB_NB)
+    return "@gbvar" + str(GB_NB)
 
 # Converts float to hex
 import struct

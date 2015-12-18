@@ -293,12 +293,11 @@ def escape_special_chars(s):
 
 def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
-    s = newGBVar()
+    global cc
+    s = cc.addText(escape_special_chars(p[1]))
     l = len(p[1]) - 2
-    setGB(s + " = internal constant [" + str(l) + " x i8] c\"" + escape_special_chars(p[1]) + "\"")
     reg = "getelementptr([" + str(l) + " x i8]* " + s + ", i32 0, i32 0)"
     p[0] = {"type" : ArrayType(ValueType.CHAR, cc), "code" : "", "reg" : reg}
-
 
 def p_primary_expression_paren_expr(p):
     '''primary_expression : LPAREN expression RPAREN'''
