@@ -116,7 +116,7 @@ class FunctionType(Type):
     def getReturnType(self):
         return self.r
 
-    def getArgsCount():
+    def getArgsCount(self):
         return len(self.a)
 
     def setArgType(self, i, t):
@@ -319,15 +319,17 @@ class Context:
         '''returns the code defining the constant strings'''
         code = ""
         for text, text_var in self.text.items():
-            l = len(text) - 2
-            code += text_var + " = internal constant [" + str(l) + " x i8] c" + text + "\n"
+            l = len(text)
+            code += text_var + " = internal constant [" + str(l) + " x i8] c\"" + text + "\"\n"
         return code
 
-    def generateArrayType(self):
-        '''returns the code defining the array types'''
-        code = ""
-        for elt_type, type_name in self.array_types.items():
-            code += type_name + " = type { i32, " + elt_type + " }\n"
+    def generateArrayType(context):
+    '''returns the code defining the array types'''
+    code = ""
+    for elt_type, type_name in context.array_types.items():
+        code += type_name + " = type { i32, " + elt_type + " }\n"
+    return code
+
 
 
 # Label generation

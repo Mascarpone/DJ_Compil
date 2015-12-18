@@ -22,7 +22,7 @@ reserved = (
 
 tokens = reserved + (
     # Literals (identifier, integer constant, float constant, string constant, char const)
-    'ID', 'ICONST', 'FCONST', 'SCONST', #'CCONST',
+    'ID', 'ICONST', 'FCONST', 'SCONST', 'CCONST',
 
     # Operators (+,-,*,/,%,|,&,~,^,<<,>>, ||, &&, !, <, <=, >, >=, ==, !=)
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
@@ -125,7 +125,7 @@ t_FCONST = r'(\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+)'
 t_SCONST = r'\"([^\\\n]|(\\.))*?\"'
 
 # Character constant 'c'
-#t_CCONST = r'\'([^\\\n]|(\\.))*?\''
+t_CCONST = r'\'([^\\\n]|(\\.))\''
 
 # Comments
 def t_comment(t):

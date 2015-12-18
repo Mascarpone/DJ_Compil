@@ -45,7 +45,8 @@ def p_external_declaration_4(p):
     # function_declarator opens a new context that must be closed
     cc.close()
     # now back in global context:
-    cc.setType(p[3]["name"], FunctionType(p[2]["type"], p[3]["type"]))
+    cc.setType(p[3]["name"], FunctionType(p[2]["type"], p[4]["type"]))
+    cc.setAddr(p[3]["name"], "@"+p[3]["name"])
     p[0] = {"code" : "declare " + str(p[2]["type"]) + " @" + p[3]["name"] + "(" + p[4]["code"] + ")"}
     pass
 
@@ -59,6 +60,7 @@ def p_function_definition(p):
         warning(p.lineno(2), "You are redefining '"+p[2]["name"]+"'")
     cc.close()
     cc.setType(p[2]["name"], FunctionType(p[1]["type"], p[3]["type"]))
+    cc.setAddr(p[2]["name"], "@"+p[2]["name"])
 
     # check return type
     for l, t in cc.getReturnTypes():
@@ -242,7 +244,7 @@ def p_declarator_1(p):
 
 
 def p_declarator_2(p):
-    '''declarator : ID EQUALS primary_expression'''
+    '''declarator : ID EQUALS expression'''
     p[0] = {"name" : p[1],
             "reg" : p[3]["reg"],
             "code" : p[3]["code"],
@@ -265,9 +267,13 @@ def p_primary_expression_id(p):
 
     p[0] = {"type" : t}
     # when its a value, generate load code
-    p[0]["reg"] = newReg() # register for the value
-    p[0]["code"] = p[0]["reg"] + " = load " + str(t) + "* " + r + "\n"
-    p[0]["addr"] = r # keep address for affectation statement
+    if t.isValue() or (t.isFunction() and r[0] == "%") or t.isArray():
+        p[0]["reg"] = newReg() # register for the value
+        p[0]["code"] = p[0]["reg"] + " = load " + str(t) + "* " + r + "\n"
+        p[0]["addr"] = r # keep address for affectation statement
+    elif t.isFunction(): # starts with "@"
+        p[0]["reg"] = r
+        p[0]["code"] = ""
 
 
 def p_primary_expression_iconst(p):
@@ -279,25 +285,22 @@ def p_primary_expression_fconst(p):
     '''primary_expression : FCONST'''
     p[0] = {"type" : ValueType.FLOAT, "code" : "", "reg" : float_to_hex(float(p[1]))}
 
-
-def escape_special_chars(s):
-    l = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_/*+$0123456789:,;?!=()[]{}\\|\"'<>#&%"
-    r = ""
-    for c in s:
-        if not c in l:
-            r += "\\" + hex(ord(c))[2:]
-        else:
-            r += c
-    return r
-
-
 def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
-    global cc
-    s = cc.addText(escape_special_chars(p[1]))
-    l = len(p[1]) - 2
+    estr = escape_string(p.lineno(0), p[1])
+    s = cc.addText(estr)
+    l = len(estr)
     reg = "getelementptr([" + str(l) + " x i8]* " + s + ", i32 0, i32 0)"
     p[0] = {"type" : ArrayType(ValueType.CHAR, cc), "code" : "", "reg" : reg}
+
+def p_primary_expression_cconst(p):
+    '''primary_expression : CCONST'''
+    p[0] = {"type" : ValueType.CHAR,
+            "code" : ""}
+    if sys.version_info[0] >= 3:
+        p[0]["reg"] = str(ord(bytes(p[1][1:-1], "utf-8").decode("unicode_escape")))
+    else:
+        p[0]["reg"] = str(ord(p[1][1:-1].decode('string_escape')))
 
 def p_primary_expression_paren_expr(p):
     '''primary_expression : LPAREN expression RPAREN'''
@@ -320,9 +323,9 @@ def p_primary_expression_map(p):
     if not p[5]["type"].isArray():
         error(p.lineno(5), "Second argument of function 'map()' is expected to be an array. Got a '" + type2str(p[5]["type"]) + "'.")
     if p[3]["type"].getArgsCount() != 1:
-        error(p.lineno(5), "The function passed to 'map()' is not taking the expected number of arguments. Got '" + str(p[3]["type"].getArgsCount()) + "', expected 1.")
-    if p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()):
-        error(p.lineno(1), "Incompatible types in 'map()'. You are trying to match '" + str(p[3]["type"].getArgType(0)) + "' with '" + str(p[5]["type"].getElementsType()) + "'.")
+        error(p.lineno(5), "The function passed to 'map()' is not taking the expected number of arguments. Got '" + type2str(p[3]["type"].getArgsCount()) + "', expected 1.")
+    if not p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()):
+        error(p.lineno(1), "Incompatible types in 'map()'. You are trying to match '" + type2str(p[3]["type"].getArgType(0)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
     p[0] = {"type" : ArrayType(p[3]["type"].getReturnType(), cc), "code" : "; primary_expression_map", "reg" : "registre"}
 
 
@@ -348,18 +351,18 @@ def p_primary_expression_id_paren(p):
     t = cc.getType(p[1])
     if not isFunction(t):
         error(p.lineno(1), "You are trying to call '" + p[1] + "', which is not a function.")
-    if len(t[1]) - 1 != len(p[3]):
-        error(p.lineno(1), "Invalid number of arguments. Got " +  + " expected " + (len(t[1]) - 1) + ".")
+    if t.getArgsCount() != 0:
+        error(p.lineno(1), "Invalid number of arguments. Got " + str(t.getArgsCount()) + " but expected 0.")
 
     # call function
-    code = "call " + t[1][0] + " @" + p[1] + "()" + "\n"
-    reg = None
+    code = "call " + str(t.getReturnType()) + " " + cc.getAddr(p[1]) + "()\n"
+    r = None
     # store result if any
-    if t[1][0] != "void":
-        r1 = newReg()
-        code = r1 + " = " + code
-        reg = r1
-    p[0] = {"type" : t[1][0], "code" : code, "reg" : reg}
+    if not t.getReturnType().equals(ValueType.VOID):
+        r = newReg()
+        code = r + " = " + code
+
+    p[0] = {"type" : t.getReturnType(), "code" : code, "reg" : r}
 
 
 def p_primary_expression_id_paren_args(p):
@@ -368,44 +371,29 @@ def p_primary_expression_id_paren_args(p):
     if not cc.exists(p[1]):
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
     t = cc.getType(p[1])
-    if not isFunction(t):
+    if not t.isFunction():
         error(p.lineno(1), "You are trying to call '" + p[1] + "', which is not a function.")
-    if len(t[1]) - 1 != len(p[3]):
-        error(p.lineno(1), "Invalid number of arguments. Got " +  + " expected " + (len(t[1]) - 1) + ".")
+    if t.getArgsCount() != len(p[3]["type"]):
+        error(p.lineno(1), "Invalid number of arguments. Got " + str(len(p[3]["type"])) + " but expected " + str(t.getArgsCount()) + ".")
+    if cc.getAddr(p[1]) is None:
+        error(p.lineno(1), "'" + p[1] + "' has not been initialized.")
 
-    #code = p[3]["code"]
+    # Check arguments types
     code = []
-    for arg_reg, arg_t, expected_t in zip(p[3]["reg"], p[3]["type"], t[1][1:]):
+    for arg_reg, arg_t, expected_t in zip(p[3]["reg"], p[3]["type"], t.a):
+        if not arg_t.equals(expected_t):
+            error(p.lineno(0), "Incompatible types in function call. Got '" + type2str(arg_t) + "' but expected '" + type2str(expected_t) + "'.")
+        code.append(str(arg_t) + " " + arg_reg)
+    code = "call " + str(t.getReturnType()) + " " + cc.getAddr(p[1]) + "(" + ", ".join(code) + ")\n"
 
-        code.append(arg_reg)
+    r = None
+    # store result if any
+    if not t.getReturnType().equals(ValueType.VOID):
+        r = newReg()
+        code = r + " = " + code
 
+    p[0] = {"type" : t.getReturnType(), "code" : p[3]["code"] + code, "reg" : r}
 
-    if t[1][0] == "void":
-        code += "call " + t[1][0][1] + " @" + p[1] + "("
-        for r, ty in zip(p[3]["reg"], p[3]["type"]):
-            if ty[0] == "v":
-                code += ty[1] + " " + r
-            elif ty[0] == "f": #function
-                code += ty[1][0][1] + " " + r
-            else: #array
-                code += ty[1][1] + "* " + r
-        code += ")\n"
-        reg = None
-    else:
-        r1 = newReg()
-        code += r1 + " = call " + t[1][0][1] + " @" + p[1] + "("
-        args = []
-        for r, ty in zip(p[3]["reg"], p[3]["type"]):
-            if ty[0] == "v":
-                args += [ty[1] + " " + r]
-            else: #functions
-                args += [ty[1][0][1] + " " + r]
-        code += ", ".join(args)
-        code += ")\n"
-        reg = r1
-
-    p[0] = {"type" : t, "code" : code, "reg" : reg}
-    pass
 
 def p_primary_expression_id_plusplus(p):
     '''primary_expression : ID PLUSPLUS'''
@@ -453,8 +441,9 @@ def p_postfix_expression_1(p):
     '''postfix_expression : primary_expression'''
     p[0] = {"type" : p[1]["type"],
             "reg" : p[1]["reg"],
-            "code" : p[1]["code"],
-            "addr" : p[1]["addr"] if "addr" in p[1] else None}
+            "code" : p[1]["code"]}
+    if "addr" in p[1]:
+        p[0]["addr"] = p[1]["addr"]
     pass
 
 def p_postfix_expression_2(p):
@@ -463,6 +452,7 @@ def p_postfix_expression_2(p):
         error(p.lineno(0), "Trying to access to an element of something which is not an array.")
     p[0] = {"type" : p[1]["type"].getElementsType(),
             "reg" : "newreg",
+            "addr" : "%register", #TODO : compute the right elementptr
             "code" : "; postfix_expression:table"}
     pass
 
@@ -498,7 +488,7 @@ def p_unary_expression_2(p):
                      + r1 + " = load " + str(p[2]["type"]) + "* " + p[2]["reg"] + "\n"
                      + r2 + " = " + op + " " + str(p[2]["type"]) + " " + r1 + ", 1 \n"
                      + "store " + str(p[2]["type"]) + " " + r + ", " + str(p[2]["type"]) + "* " + p[2]["reg"]}
-    pass
+
 
 def p_unary_expression_3(p):
     '''unary_expression : MINUSMINUS unary_expression'''
@@ -515,7 +505,7 @@ def p_unary_expression_3(p):
                      + r1 + " = load " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
                      + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", 1 \n"
                      + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
-    pass
+
 
 def p_unary_expression_4(p):
     '''unary_expression : MINUS unary_expression'''
@@ -532,7 +522,7 @@ def p_unary_expression_4(p):
                      + r1 + " = load " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
                      + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", -1 \n"
                      + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
-    pass
+
 
 def p_unary_expression_5(p):
     '''unary_expression : LNOT unary_expression'''
@@ -546,7 +536,7 @@ def p_unary_expression_5(p):
                      + r2 + " = icmp eq " + p[2]["type"][1] + " " + r1 + ", 0 \n"
                      + r3 + " = zext i1 " + r2 + " to i32\n"
             }
-    pass
+
 
 # >>>> Rangé à partir d'ici >>>>
 
@@ -561,7 +551,7 @@ def convert(reg, tbefore, tafter, newreg, lineno):
     else :
         error(lineno, "Invalid implicit conversion.")
 
-    return newreg + " = " + op + " " + type2str(tbefore) + " " + reg + " to " + type2str(tafter) + "\n"
+    return newreg + " = " + op + " " + str(tbefore) + " " + reg + " to " + str(tafter) + "\n"
 
 operation_intchar = {"*" : "mul", "/" : "sdiv", "%" : "srem", "+" : "add", "-" : "sub", "<" : "icmp slt", ">" : "icmp sgt", "<=" : "icmp sle", ">=" : "icmp sge", "==" : "icmp eq", "!=" : "icmp ne"}
 operation_float = {"*" : "fmul", "/" : "fdiv", "%" : "frem", "+" : "fadd", "-" : "fsub", "<" : "fcmp olt", ">" : "fcmp ogt", "<=" : "fcmp ole", ">=" : "fcmp oge", "==" : "fcmp oeq", "!=" : "fcmp one"}
@@ -652,7 +642,7 @@ def p_additive_expression_4(p):
 
     p[0] = {"reg"  : booli32_cmpto0,
             "code" : add["code"]
-                   + booli1_cmpto0 + " = icmp eq " + type2str(add["type"]) + " " + add["reg"] + ", 0 \n"
+                   + booli1_cmpto0 + " = icmp eq " + str(add["type"]) + " " + add["reg"] + ", 0 \n"
                    + booli32_cmpto0 + " = zext i1 " + booli1_cmpto0 + " to i32\n",
             "type" : ValueType.INT}
 
@@ -682,7 +672,7 @@ def p_multiplicative_expression_5(p):
 
     p[0] = {"reg"  : booli32_cmpto0,
             "code" : mul["code"]
-                   + booli1_cmpto0 + " = icmp eq " + type2str(mul["type"]) + " " + mul["reg"] + ", 0 \n"
+                   + booli1_cmpto0 + " = icmp eq " + str(mul["type"]) + " " + mul["reg"] + ", 0 \n"
                    + booli32_cmpto0 + " = zext i1 " + booli1_cmpto0 + " to i32\n",
             "type" : ValueType.INT}
 
@@ -702,7 +692,7 @@ def expressionOperation(operation, op1, op2, lineno):
     code = op1["code"] + op2["code"]
 
     op1load = newReg()
-    code += op1load + " = load " + type2str(op1["type"]) + "* " + op1["addr"] + "\n"
+    code += op1load + " = load " + str(op1["type"]) + "* " + op1["addr"] + "\n"
 
     r2 = op2["reg"]
     if not op2["type"].equals(t):
@@ -711,7 +701,7 @@ def expressionOperation(operation, op1, op2, lineno):
 
     result = newReg()
     code += result + " = " + operation_llvm + " " + str(t) + " " + op1load + ", " + r2 + "\n"
-    code += "store " + type2str(op1["type"]) + " " + result + ", " + type2str(op1["type"]) + "* " + op1["addr"] + "\n"
+    code += "store " + str(op1["type"]) + " " + result + ", " + str(op1["type"]) + "* " + op1["addr"] + "\n"
 
     return {"type" : t,
             "reg"  : result,
@@ -736,7 +726,7 @@ def p_expression_2(p):
         code += convert(op2["reg"], op2["type"], t, r3, p.lineno(0)) #checks types
 
     p[0] = {"code" : p[1]["code"] + p[3]["code"] + code
-                   + "store " + type2str(p[1]["type"]) + " " + r3 + ", " + type2str(p[1]["type"]) + "* " + p[1]["addr"] + "\n",
+                   + "store " + str(p[1]["type"]) + " " + r3 + ", " + str(p[1]["type"]) + "* " + p[1]["addr"] + "\n",
             "reg" : r3,
             "type" : p[1]["type"]}
     pass
@@ -808,7 +798,7 @@ def p_selection_statement_1(p):
     p[0] = {"code" :  "br label %" + if_head + "\n"
                     + "\n" + if_head + ":\n"
                     + p[3]["code"] + "\n"
-                    + r + " = icmp ne " + type2str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
+                    + r + " = icmp ne " + str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
                     + "br i1 " + r + ", label %" + if_body + ", label %" + if_exit + "\n"
                     + "\n" + if_body + ":\n"
                     + p[5]["code"]
@@ -826,7 +816,7 @@ def p_selection_statement_2(p):
     p[0] = {"code" :  "br label %" + if_head + "\n"
                     + "\n" + if_head + ":\n"
                     + p[3]["code"] + "\n"
-                    + r + " = icmp ne " + type2str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
+                    + r + " = icmp ne " + str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
                     + "br i1 " + r + ", label %" + if_yes + ", label %" + if_no + "\n"
                     + "\n" + if_yes + ":\n"
                     + p[5]["code"]
@@ -851,7 +841,7 @@ def p_selection_statement_3(p):
                      + "br label %" + loop_head + "\n"
                      + "\n" + loop_head + ": \n"
                      + p[4]["code"]
-                     + r + " = icmp ne " + type2str(p[4]["type"]) + " " + p[4]["reg"] + ", 0 \n"
+                     + r + " = icmp ne " + str(p[4]["type"]) + " " + p[4]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_body + ": \n"
                      + p[7]["code"]
@@ -878,7 +868,7 @@ def p_iteration_statement_1(p):
     p[0] = {"code" : "br label %" + loop_head + "\n"
                      + "\n" + loop_head + ": \n"
                      + p[3]["code"]
-                     + r + " = icmp ne " + type2str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
+                     + r + " = icmp ne " + str(p[3]["type"]) + " " + p[3]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_body + ": \n"
                      + p[5]["code"] + "\n"
@@ -898,7 +888,7 @@ def p_iteration_statement_2(p):
                      + "br label %" + loop_tail + "\n"
                      + "\n" + loop_tail + ": \n"
                      + p[5]["code"] + "\n"
-                     + r + " = icmp ne " + type2str(p[5]["type"]) + " " + p[5]["reg"] + ", 0 \n"
+                     + r + " = icmp ne " + str(p[5]["type"]) + " " + p[5]["reg"] + ", 0 \n"
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_exit + ": \n"
            }
@@ -915,7 +905,7 @@ def p_jump_statement_2(p):
     '''jump_statement : RETURN expression SEMI'''
     global cc
     cc.addReturnType((p.lineno(0), p[2]["type"]))
-    p[0] = {"code" : p[2]["code"] + "ret " + type2str(p[2]["type"]) + " " + p[2]["reg"]}
+    p[0] = {"code" : p[2]["code"] + "ret " + str(p[2]["type"]) + " " + p[2]["reg"]}
 
 
 # If no rules have been found
