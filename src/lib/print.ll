@@ -7,7 +7,7 @@ declare void @printchar(i8)
   i8*  ; content
 }
 
-define void @print(%chartable* %ct) { 
+define void @print(%chartable* %ct) {
   %i = alloca i32
   store i32 0, i32* %i
   br label %loopprint_head
@@ -22,10 +22,10 @@ loopprint_head:
 loopprint_body:
   %size = getelementptr %chartable* %ct, i32 0, i32 0
   %i.val = load i32* %i
-  %ct.content = getelementptr %chartable* %ct, i32 0, i32 1
-  %ct.i = getelementptr i8** %ct.content, i32 %i.val
-  %ct.i.valptr = load i8** %ct.i
-  %ct.i.val = load i8* %ct.i.valptr
+  %ct.content.ptr = getelementptr %chartable* %ct, i32 0, i32 1
+  %ct.content = load i8** %ct.content.ptr
+  %ct.i = getelementptr i8* %ct.content, i32 %i.val
+  %ct.i.val = load i8* %ct.i
   call void @printchar(i8 %ct.i.val)
   br label %loopprint_close
 
@@ -37,4 +37,17 @@ loopprint_close:
 
 loopprint_exit:
   ret void
+}
+
+@glob.txt = constant [3 x i8] c"abc"
+
+define i32 @main() {
+    %m.s.ptr = alloca %chartable
+    %m.size.ptr = getelementptr %chartable* %m.s.ptr, i32 0, i32 0
+    %m.buff.ptr = getelementptr %chartable* %m.s.ptr, i32 0, i32 1
+    %txt.first = getelementptr [3 x i8]* @glob.txt, i64 0, i64 0
+    store i32 3, i32* %m.size.ptr
+    store i8* %txt.first, i8** %m.buff.ptr
+    call void @print(%chartable* %m.s.ptr)
+    ret i32 0
 }

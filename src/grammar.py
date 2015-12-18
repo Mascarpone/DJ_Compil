@@ -286,6 +286,26 @@ def p_primary_expression_fconst(p):
     p[0] = {"type" : ValueType.FLOAT, "code" : "", "reg" : float_to_hex(float(p[1]))}
 
 
+def escape_string(lineno, s):
+    '''returns the string s with escaped or non-pritable characters replaced by ANSI code'''
+    if sys.version_info[0] >= 3:
+        s2 = bytes(s[1:-1], "utf-8").decode("unicode_escape")
+    else:
+        s2 = s[1:-1].decode('string_escape')
+    p = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ " #string.printable[:-5] # all printable chars except \n \t \r ...
+    r = ""
+    for i in range(len(s2)):
+        if ord(s2[i]) >= 128: # not ascii
+            #error(lineno, "The character no " + str(i) + " of the string is not ASCII.")
+            print "error" + str(ord(s2[i]))
+        elif s2[i] in p:
+            r += s2[i]
+        else:
+            c = hex(ord(s2[i]))[2:]
+            r += "\\" + "0" * (2 - len(c)) + c.upper()
+    return r
+
+
 def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
     s = newGBVar()
