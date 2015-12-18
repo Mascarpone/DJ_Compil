@@ -19,7 +19,7 @@ all: tst_recette tst_unit
 
 tst_recette:
 
-tst_unit: 
+tst_unit:
 
 
 $(LL_DIR)/%.ll: $(C_DIR)/%.c $(PARSER)

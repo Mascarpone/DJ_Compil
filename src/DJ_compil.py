@@ -19,7 +19,6 @@ import grammar
 from ply import yacc as yacc
 from grammar import cc
 
-#if __name__ == "__main__":
 
 if len(sys.argv) < 3:
     sys.stderr.write("Usage: "+sys.argv[0]+" <input_file> <output_file>\n")
@@ -44,7 +43,7 @@ else:
     print(cc.generateText())
     print(cc.generateArrayType())
     print(result["code"])
-    with open("./" + sys.argv[2], "w") as f:
+    with open(sys.argv[2], "w") as f:
         f.write("declare i8* @malloc(i64)")
         seg = cc.generateText()
         if seg != "":

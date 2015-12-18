@@ -130,9 +130,6 @@ def p_parameter_declaration(p):
         raise NotImplemented
         # TODO: copy struct entries
         init += "getelementptr ... \n"
-    else:
-        raise TypeError
-    init = ""
     p[0] = {"type" : t,
             "code" : str(t) + " " + r_a,
             "init" : init}
