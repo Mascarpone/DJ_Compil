@@ -116,7 +116,7 @@ class FunctionType(Type):
     def getReturnType(self):
         return self.r
 
-    def getArgsCount():
+    def getArgsCount(self):
         return len(self.a)
 
     def setArgType(self, i, t):
@@ -338,6 +338,7 @@ def generateArrayType(context):
     code = ""
     for elt_type, type_name in context.array_types.items():
         code += type_name + " = type { i32, " + elt_type + " }\n"
+    return code
 
 
 # Label generation

@@ -9,13 +9,13 @@
  *      youpi
  */
 
-char foo (int i)
+char foo (char i)
 {
     char a;
-    int span;
+    char span;
 
     span = 'z' - 'a' + 1;
-    a = (char) ((i % span) + 'a');
+    a = (i % span) + 'a';
 
     return a;
 }
