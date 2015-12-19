@@ -240,12 +240,7 @@ def p_declaration_1(p):
             if not d["type"].equals(t):
                 error(p.lineno(1), "Incompatible types in declaration. Expected '" + type2str(t) + "' but got '" + type2str(d["type"]) + "'.")
             code += d["code"]
-            if t.isValue() or t.isFunction():
-                code += "store " + str(d["type"]) + " " + d["reg"] + ", " + str(t) + "* " + reg + "\n"
-            elif t.isArray():
-                reg_res = newReg()
-                code += reg_res + " = load " + str(d["type"]) + "* " + d["reg"] + "\n"
-                code += "store " + str(d["type"]) + " " + reg_res + ", " + str(t) + "* " + reg + "\n"
+            code += "store " + str(d["type"]) + " " + d["reg"] + ", " + str(t) + "* " + reg + "\n"
         else:
             if t.isValue():
                 code += "store " + str(t) + " 0, " + str(t) + "* " + reg + "\n"
