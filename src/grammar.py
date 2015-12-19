@@ -356,27 +356,7 @@ def p_primary_expression_sconst(p):
     code += reg + " = insertvalue " + str(t) + " " + r2 + ", i8* " + allocated_buff + ", 1\n"
     reg_global_string_ptr = newReg()
     code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
-    code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
-
-    ## create structure for the corresponding char table
-    #reg = newReg()
-    #code = reg + " = alloca " + str(t) + "\n"
-    ## set its size
-    #reg_size_ptr = newReg()
-    #code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
-    #code += "store i32 " + str(l) + ", i32* " + reg_size_ptr + "\n"
-    ## allocate a char buffer
-    ## size allocated has +1 in order not to allocate 0 byte for the empty string #security
-    #allocated_buff = newReg()
-    #code += allocated_buff + " = call i8* @malloc(i64 " + str(l + 1) + ")\n"
-    ## store it in char table structure
-    #reg_buff_ptr = newReg()
-    #code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
-    #code += "store i8* " + allocated_buff + ", i8** " + reg_buff_ptr + "\n"
-    ## get global string buffer and copy it in char table buffer
-    #reg_global_string_ptr = newReg()
-    #code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
-    #code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
+    code += "call void @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
 
     # this is it
     p[0] = {"type" : t, "code" : code, "reg" : reg}
