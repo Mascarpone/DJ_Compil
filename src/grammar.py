@@ -238,7 +238,7 @@ def p_declaration_1(p):
         code += reg + " = alloca " + str(t) + "\n"
         if d["code"] is not None:
             if not d["type"].equals(t):
-                error(p.lineno(0), "Incompatible types in declaration. Expected '" + type2str(t) + "' but got '" + type2str(d["type"]) + "'.")
+                error(p.lineno(1), "Incompatible types in declaration. Expected '" + type2str(t) + "' but got '" + type2str(d["type"]) + "'.")
             code += d["code"]
             if t.isValue() or t.isFunction():
                 code += "store " + str(d["type"]) + " " + d["reg"] + ", " + str(t) + "* " + reg + "\n"
@@ -427,7 +427,6 @@ def p_primary_expression_reduce(p):
         error(p.lineno(1), "Incompatible types in 'reduce()'. You are trying to match '" + type2str(p[3]["type"].getReturnType()) + "', '" + type2str(p[3]["type"].getArgType(0)) + "', '" + type2str(p[3]["type"].getArgType(1)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
     if p[3]["type"].getReturnType().equals(ValueType.VOID):
         error(p.lineno(1), "You are trying to use 'void' as a type in reduce() function.")
-
 
     reduce_fct = cc.getReduceFunction(p[3]["type"].getReturnType())
     p[0] = {"code" : p[3]["code"] + p[5]["code"]}
