@@ -197,8 +197,6 @@ class Context:
         self.id_type = {}                           # store the type of declared variables. key = var name, value = Type instance
         self.id_addr = {}                           # store the allocated adress of variables. key = var name, value = reg containing addr
         self.glob = self if c is None else c.glob   # remember global context if needed. ** UNUSED ** delete it ?
-        #self.array_types = {}                       # array structures. one for each type of element. key = elt_type, value = structure reg name
-        #self.array_types_counter = 0                # A counter to name array types
         self.compound_statement_open_new_cc = True  # set it to False to prevent compound_statement from opening a new cc
         self.return_types_found = []                # used to check if returned values have a good type
         self.text = {}                              # strings that will be definded as global variables. key = string, value = global name
@@ -237,10 +235,6 @@ class Context:
 
     def setType(self, id, t):
         '''sets the type of id in current context to t'''
-        #if t.isArray(): # create a new type if needed
-        #    if not str(t.elt) in self.array_types:
-        #        self.array_types[str(t.elt)] = "%array" + str(self.array_types_counter)
-        #        self.array_types_counter += 1
         self.id_type[id] = t
 
     def getAddr(self, id):
@@ -317,14 +311,6 @@ class Context:
             code += text_var + " = internal constant [" + str(l) + " x i8] c\"" + text + "\"\n"
         return code
 
-    #def generateArrayType(self):
-    #    '''returns the code defining the array types'''
-    #    code = ""
-    #    for elt_type, type_name in self.array_types.items():
-    #        code += type_name + " = type { i32, " + elt_type + "* }\n"
-    #    return code
-
-
 
 # Label generation
 LAB_NB = 0
@@ -333,12 +319,14 @@ def newLab():
     LAB_NB += 1
     return "label" + str(LAB_NB)
 
+
 # Registre generation
 RG_NB = 0
 def newReg():
     global RG_NB
     RG_NB += 1
     return "%r" + str(RG_NB)
+
 
 # Global variable generation
 GB_NB = 0

@@ -307,6 +307,7 @@ def p_primary_expression_id(p):
         p[0]["addr"] = r
         p[0]["code"] = ""
 
+
 def p_primary_expression_iconst(p):
     '''primary_expression : ICONST'''
     p[0] = {"type" : ValueType.INT, "code" : "", "reg" : p[1]}
@@ -350,8 +351,9 @@ def p_primary_expression_sconst(p):
     code += reg_size_ptr + " = getelementptr { i32, i8* }* " + reg + ", i32 0, i32 0\n"
     code += "store i32 " + str(l) + ", i32* " + reg_size_ptr + "\n"
     # allocate a char buffer
+    # size allocated has +1 in order not to allocate 0 byte for the empty string #security
     allocated_buff = newReg()
-    code += allocated_buff + " = call i8* @malloc(i64 " + str(l) + ")\n"
+    code += allocated_buff + " = call i8* @malloc(i64 " + str(l + 1) + ")\n"
     # store it in char table structure
     reg_buff_ptr = newReg()
     code += reg_buff_ptr + " = getelementptr { i32, i8* }* " + reg + ", i32 0, i32 1\n"
@@ -490,7 +492,7 @@ def p_primary_expression_id_plusplus(p):
             "code" :   r1 + " = load " + str(t) + "* " + r + "\n"
                      + r2 + " = " + op + " " + str(t) + " " + r1 + ", 1 \n"
                      + "store " + str(t) + " " + r2 + ", " + str(t) + "* " + r + "\n"}
-    pass
+                     
 
 def p_primary_expression_id_minusminus(p):
     '''primary_expression : ID MINUSMINUS'''
@@ -511,7 +513,7 @@ def p_primary_expression_id_minusminus(p):
             "code" :   r1 + " = load " + str(t) + "* " + r + "\n"
                      + r2 + " = " + op + " " + str(t) + " " + r1 + ", 1 \n"
                      + "store " + str(t) + " " + r2 + ", " + str(t) + "* " + r + "\n"}
-    pass
+
 
 def p_postfix_expression_1(p):
     '''postfix_expression : primary_expression'''
@@ -520,7 +522,7 @@ def p_postfix_expression_1(p):
             "code" : p[1]["code"]}
     if "addr" in p[1]:
         p[0]["addr"] = p[1]["addr"]
-    pass
+
 
 def p_postfix_expression_2(p):
     '''postfix_expression : postfix_expression LBRACKET expression RBRACKET'''
@@ -543,88 +545,16 @@ def p_postfix_expression_2(p):
             "reg" : elt,
             "addr" : elt_ptr,
             "code" : code}
-    pass
+
 
 def p_argument_expression_list_1(p):
     '''argument_expression_list : expression'''
     p[0] = {"code" : p[1]["code"], "type" : [p[1]["type"]], "reg" : [p[1]["reg"]]}
-    pass
+
 
 def p_argument_expression_list_2(p):
     '''argument_expression_list : argument_expression_list COMMA expression'''
     p[0] = {"code" : p[1]["code"] + p[3]["code"], "type" : p[1]["type"] + [p[3]["type"]], "reg" : p[1]["reg"] + [p[3]["reg"]]}
-    pass
-
-def p_unary_expression_1(p):
-    '''unary_expression : postfix_expression'''
-    p[0] = {"code" : p[1]["code"], "type" : p[1]["type"], "reg" : p[1]["reg"]}
-    if "addr" in p[1]:
-        p[0]["addr"] = p[1]["addr"]
-    pass
-
-def p_unary_expression_2(p):
-    '''unary_expression : PLUSPLUS unary_expression'''
-    if p[2]["type"].equals(ValueType.INT):
-        op = "add"
-    elif p[2]["type"].equals(ValueType.FLOAT):
-        op = "fadd"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"type" : p[2]["type"],
-            "reg" : p[2]["reg"],
-            "code" :   p[2]["code"]
-                     + r1 + " = load " + str(p[2]["type"]) + "* " + p[2]["reg"] + "\n"
-                     + r2 + " = " + op + " " + str(p[2]["type"]) + " " + r1 + ", 1 \n"
-                     + "store " + str(p[2]["type"]) + " " + r + ", " + str(p[2]["type"]) + "* " + p[2]["reg"]}
-
-
-def p_unary_expression_3(p):
-    '''unary_expression : MINUSMINUS unary_expression'''
-    if p[2]["type"][1] == "i32":
-        op = "sub"
-    elif p[2]["type"][1] == "float":
-        op = "fsub"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"type" : p[2]["type"],
-            "reg" : p[2]["reg"],
-            "code" :   p[2]["code"]
-                     + r1 + " = load " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
-                     + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", 1 \n"
-                     + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
-
-
-def p_unary_expression_4(p):
-    '''unary_expression : MINUS unary_expression'''
-    if p[2]["type"][1] == "i32":
-        op = "mul"
-    elif p[2]["type"][1] == "float":
-        op = "fmul"
-
-    r1 = newReg()
-    r2 = newReg()
-    p[0] = {"type" : p[2]["type"],
-            "reg" : p[2]["reg"],
-            "code" :   p[2]["code"]
-                     + r1 + " = load " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
-                     + r2 + " = " + op + " " + p[2]["type"][1] + " " + r1 + ", -1 \n"
-                     + "store " + p[2]["type"][1] + " " + r + ", " + p[2]["type"][1] + "* " + p[2]["reg"]}
-
-
-def p_unary_expression_5(p):
-    '''unary_expression : LNOT unary_expression'''
-    r1 = newReg()
-    r2 = newReg()
-    r3 = newReg()
-    p[0] = {"type" : ValueType.INT,
-            "reg" : r3,
-            "code" :   p[2]["code"]
-                     + r1 + " = load " + p[2]["type"][1] + "* " + p[2]["reg"] + "\n"
-                     + r2 + " = icmp eq " + p[2]["type"][1] + " " + r1 + ", 0 \n"
-                     + r3 + " = zext i1 " + r2 + " to i32\n"
-            }
 
 
 # Operations
@@ -668,6 +598,51 @@ def operation(operation, op1, op2, lineno):
     code += r3 + " = " + operation_llvm + " " + str(t) + " " + r1 + ", " + r2 + "\n"
 
     return {"reg" : r3, "code" : code, "type" : t} #WARNING: type t is false if the operation is a comparison (then it is a i1)
+
+#Unary Expressions
+
+def unaryOperation(operation, x, n):
+    t = x["type"]
+    if t.equals(ValueType.INT) or t.equals(ValueType.CHAR):
+        operation_llvm = operation_intchar[operation]
+    if t.equals(ValueType.FLOAT):
+        operation_llvm = operation_float[operation]
+
+    code = x["code"]
+    r = newReg()
+    code += r + " = " + operation_llvm + " " + str(t) + " " + x["reg"] + ", " + str(n) + "\n"
+    return {"reg" : r, "code" : code, "type" : t}
+
+def p_unary_expression_1(p):
+    '''unary_expression : postfix_expression'''
+    p[0] = {"code" : p[1]["code"], "type" : p[1]["type"], "reg" : p[1]["reg"]}
+    if "addr" in p[1]:
+        p[0]["addr"] = p[1]["addr"]
+    pass
+
+def p_unary_expression_2(p):
+    '''unary_expression : PLUSPLUS unary_expression'''
+    p[0] = unaryOperation('+', p[2], 1)
+    p[0]["code"] += "store " + str(p[0]["type"]) + " " + p[0]["reg"] + ", " + str(p[0]["type"]) + "* " + p[2]["addr"] + "\n"
+    p[0]["addr"] = p[2]["addr"]
+
+def p_unary_expression_3(p):
+    '''unary_expression : MINUSMINUS unary_expression'''
+    p[0] = unaryOperation('-', p[2], 1)
+    p[0]["code"] += "store " + str(p[0]["type"]) + " " + p[0]["reg"] + ", " + str(p[0]["type"]) + "* " + p[2]["addr"] + "\n"
+    p[0]["addr"] = p[2]["addr"]
+
+def p_unary_expression_4(p):
+    '''unary_expression : MINUS unary_expression'''
+    p[0] = unaryOperation('*', p[2], -1)
+
+def p_unary_expression_5(p):
+    '''unary_expression : LNOT unary_expression'''
+    p[0] = unaryOperation('==', p[2], 0)
+    r = newReg()
+    p[0]["code"] += r + " = zext i1 " + p[0]["reg"] + " to i32\n"
+    p[0]["reg"] = r
+    p[0]["type"] = ValueType.INT
 
 #Comparison Expressions
 
@@ -713,6 +688,7 @@ def p_comparison_expression_7(p):
 def p_additive_expression_1(p):
     '''additive_expression : multiplicative_expression'''
     p[0] = {"reg" : p[1]["reg"], "code" : p[1]["code"], "type" : p[1]["type"]}
+
 def p_additive_expression_2(p):
     '''additive_expression : additive_expression PLUS multiplicative_expression'''
     p[0] = operation(p[2], p[1], p[3], p.lineno(0))
