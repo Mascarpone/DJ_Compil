@@ -149,8 +149,7 @@ class FunctionType(Type):
 
 class ArrayType(Type):
     '''A generic class to decribe types'''
-    def __init__(self, elt, cc):
-        self.cc = cc
+    def __init__(self, elt):
         self.elt = elt
 
     def isArray(self):
@@ -169,8 +168,7 @@ class ArrayType(Type):
             return False
 
     def __str__(self):
-        return "{ i32, " + str(self.elt) + " }"
-        #return self.cc.array_types[str(self.elt)]
+        return "{ i32, " + str(self.elt) + "* }"
 
 
 def type2str(t):
@@ -203,6 +201,8 @@ class Context:
         self.text_counter = 0                       # a counter to name strings
         self.map_functions = {}                     # used to generate map functions for each type of parameters
         self.map_functions_counter = 0              # counter for map functions
+        self.reduce_functions = {}                  # used to generate reduce functions for each type of parameters
+        self.reduce_functions_counter = 0           # counter for reduce functions
 
 
     def getParent(self):
@@ -313,7 +313,6 @@ class Context:
             code += text_var + " = internal constant [" + str(l) + " x i8] c\"" + text + "\"\n"
         return code
 
-
     def getMapFunction(self, type_in, type_out):
         '''returns the name of the map function which apply a function with prototype "type_out(type_in)"'''
         key = (str(type_in), str(type_out))
@@ -323,8 +322,28 @@ class Context:
 
     def generateMapFunctions(self):
         code = ""
-        for name, type_in, type_out in d.values():
-            code += "define { i32, " + str(type_out) + "* } " + name + "(" + str(type_in) + ") {\n"
+        for name, type_in, type_out in self.map_functions.values():
+            ti = ArrayType(type_in)
+            to = ArrayType(type_out)
+            fct_t = FunctionType(to, [ti])
+            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %t) {\n"
+            code += "; ... \n"
+            code += "\n"
+        return code
+
+    def getReduceFunction(self, t):
+        '''returns the name of the reduce function which apply a function with prototype "t(t,t)"'''
+        key = str(t)
+        if not key in self.reduce_functions:
+            self.reduce_functions[key] = ("@reduce." + str(self.reduce_functions_counter), t)
+        return self.reduce_functions[key][0]
+
+    def generateReduceFunctions(self):
+        code = ""
+        for name, t in reduce_functions.values():
+            te = ArrayType(t)
+            fct_t = FunctionType(te, [te, te])
+            code += "define " + str(te) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %t) {\n"
             code += "; ... \n"
             code += "\n"
         return code

@@ -41,13 +41,24 @@ if result is None:
 else:
     print("\n        ===== CODE =====\n")
     print(cc.generateText())
+    print(cc.generateMapFunctions())
+    print(cc.generateReduceFunctions())
+
     print(result["code"])
     with open(sys.argv[2], "w") as f:
         f.write("declare i8* @malloc(i64)\n")
         f.write("declare i8* @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)\n")
         seg = cc.generateText()
         if seg != "":
-            f.write("; Constant text\n")
+            f.write("\n; Global strings\n")
             f.write(seg)
+        map_code = cc.generateMapFunctions()
+        if map_code != "":
+            f.write("\n; map() functions\n")
+            f.write(map_code)
+        reduce_code = cc.generateReduceFunctions()
+        if reduce_code != "":
+            f.write("\n; reduce() functions\n")
+            f.write(reduce_code)
         f.write("\n; Main segment\n")
         f.write(result["code"])

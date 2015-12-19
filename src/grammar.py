@@ -157,13 +157,13 @@ def p_type_name_4(p):
 
 def p_type_name_5_1(p):
     '''type_name : type_name LBRACKET RBRACKET'''
-    p[0] = {"type" : ArrayType(p[1]["type"], cc),
+    p[0] = {"type" : ArrayType(p[1]["type"]),
             "size" : None}
 
 
 def p_type_name_5_2(p):
     '''type_name : type_name LBRACKET ICONST RBRACKET'''
-    p[0] = {"type" : ArrayType(p[1]["type"], cc),
+    p[0] = {"type" : ArrayType(p[1]["type"]),
             "size" : int(p[3])}
 
 
@@ -342,13 +342,14 @@ def p_primary_expression_sconst(p):
     global cc
     # escape string ad add it to data segment
     global_string = cc.addText(escape_string(p.lineno(1), p[1]))
+    t = ArrayType(ValueType.CHAR)
     l = len(p[1]) - 2
     # create structure for the corresponding char table
     reg = newReg()
-    code = reg + " = alloca { i32, i8* }\n"
+    code = reg + " = alloca " + str(t) + "\n"
     # set its size
     reg_size_ptr = newReg()
-    code += reg_size_ptr + " = getelementptr { i32, i8* }* " + reg + ", i32 0, i32 0\n"
+    code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
     code += "store i32 " + str(l) + ", i32* " + reg_size_ptr + "\n"
     # allocate a char buffer
     # size allocated has +1 in order not to allocate 0 byte for the empty string #security
@@ -356,14 +357,14 @@ def p_primary_expression_sconst(p):
     code += allocated_buff + " = call i8* @malloc(i64 " + str(l + 1) + ")\n"
     # store it in char table structure
     reg_buff_ptr = newReg()
-    code += reg_buff_ptr + " = getelementptr { i32, i8* }* " + reg + ", i32 0, i32 1\n"
+    code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
     code += "store i8* " + allocated_buff + ", i8** " + reg_buff_ptr + "\n"
     # get global string buffer and copy it in char table buffer
     reg_global_string_ptr = newReg()
     code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
     code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
     # this is it
-    p[0] = {"type" : ArrayType(ValueType.CHAR, cc), "code" : "", "reg" : reg}
+    p[0] = {"type" : t, "code" : code, "reg" : reg}
 
 
 def p_primary_expression_cconst(p):
@@ -412,10 +413,10 @@ def p_primary_expression_map(p):
         p[0]["reg"]  = None
         p[0]["code"] += "call void " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
     else:
-        p[0]["type"] = ArrayType(p[3]["type"].getReturnType(), cc)
+        p[0]["type"] = ArrayType(p[3]["type"].getReturnType())
         p[0]["reg"]  = newReg()
-        p[0]["code"] += p[0]["reg"] + " = call " + str(p[0]["type"]) + " " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
-    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType(), cc), "code" : code, "reg" : r}
+        p[0]["code"] += p[0]["reg"] + " = call " + str(p[3]["type"].getReturnType()) + " " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType()), "code" : code, "reg" : r}
 
 
 def p_primary_expression_reduce(p):
@@ -429,7 +430,24 @@ def p_primary_expression_reduce(p):
         error(p.lineno(5), "The function passed to 'reduce()' is not taking the expected number of arguments. Got '" + str(p[3]["type"].getArgsCount()) + "', expected 2.")
     if not p[3]["type"].getReturnType().equals(p[5]["type"].getElementsType()) or not p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()) or not p[3]["type"].getArgType(1).equals(p[5]["type"].getElementsType()):
         error(p.lineno(1), "Incompatible types in 'reduce()'. You are trying to match '" + type2str(p[3]["type"].getReturnType()) + "', '" + type2str(p[3]["type"].getArgType(0)) + "', '" + type2str(p[3]["type"].getArgType(1)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
-    # forbid void types
+    if p[3]["type"].getReturnType().equals(ValueType.VOID):
+        error(p.lineno(1), "You are trying to use 'void' as a type in reduce() function.")
+
+
+    reduce_fct = getMapFunction(p[3]["type"].getReturnType())
+    p[0] = {"code" : p[3]["code"] + p[5]["code"]}
+    if p[3]["type"].getReturnType().equals(ValueType.VOID):
+        p[0]["type"] = ValueType.VOID
+        p[0]["reg"]  = None
+        p[0]["code"] += "call void " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+    else:
+        p[0]["type"] = ArrayType(p[3]["type"].getReturnType())
+        p[0]["reg"]  = newReg()
+        p[0]["code"] += p[0]["reg"] + " = call " + str(p[3]["type"].getReturnType()) + " " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType()), "code" : code, "reg" : r}
+
+
+    # TODO forbid void types
     p[0] = {"type" : p[3]["type"].getReturnType(), "code" : "; primary_expression_reduce", "reg" : "registre"}
 
 
@@ -504,7 +522,7 @@ def p_primary_expression_id_plusplus(p):
             "code" :   r1 + " = load " + str(t) + "* " + r + "\n"
                      + r2 + " = " + op + " " + str(t) + " " + r1 + ", 1 \n"
                      + "store " + str(t) + " " + r2 + ", " + str(t) + "* " + r + "\n"}
-                     
+
 
 def p_primary_expression_id_minusminus(p):
     '''primary_expression : ID MINUSMINUS'''
