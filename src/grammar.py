@@ -430,14 +430,9 @@ def p_primary_expression_reduce(p):
 
     reduce_fct = cc.getReduceFunction(p[3]["type"].getReturnType())
     p[0] = {"code" : p[3]["code"] + p[5]["code"]}
-    if p[3]["type"].getReturnType().equals(ValueType.VOID):
-        p[0]["type"] = ValueType.VOID
-        p[0]["reg"]  = None
-        p[0]["code"] += "call void " + reduce_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
-    else:
-        p[0]["type"] = ArrayType(p[3]["type"].getReturnType())
-        p[0]["reg"]  = newReg()
-        p[0]["code"] += p[0]["reg"] + " = call " + str(p[3]["type"].getReturnType()) + " " + reduce_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+    p[0]["type"] = p[3]["type"].getReturnType()
+    p[0]["reg"]  = newReg()
+    p[0]["code"] += p[0]["reg"] + " = call " + str(p[3]["type"].getReturnType()) + " " + reduce_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
 
 
 def p_primary_expression_id_paren(p):

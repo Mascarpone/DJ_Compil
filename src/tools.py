@@ -326,9 +326,9 @@ class Context:
             ti = ArrayType(type_in)
             to = ArrayType(type_out)
             fct_t = FunctionType(type_out, [type_in])
-            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %a) {\n"
-
-            code += "  ;define and initilize i\n"
+            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %aarg) {\n"
+            code += "  %a = alloca " + str(ti) + "\n"
+            code += "  store " + str(ti) + " %aarg, " + str(ti) + "* %a"
             code += "  %i = alloca i32\n"
             code += "  store i32 0, i32* %i\n"
             code += "  ;get the size of the array\n"
@@ -345,7 +345,7 @@ class Context:
             code += "  %ret.buff.bytesize.i32 = mul i32 %size, " + str(sizeof(type_out)) + "\n"
             code += "  %ret.buff.bytesize.i64 = sext i32 %ret.buff.bytesize.i32 to i64\n"
             code += "  %ret.buff.i8 = call i8* @malloc(i64 %ret.buff.bytesize.i64)\n"
-            code += "  %ret.buff.tyout = bitcast i8* %ret.alloc.i8 to " + str(type_out) + "*\n"
+            code += "  %ret.buff.tyout = bitcast i8* %ret.buff.i8 to " + str(type_out) + "*\n"
             code += "  %ret.buff.ptr = getelementptr " + str(to) + "* %ret, i32 0, i32 1\n"
             code += "  store i32* %ret.buff, " + str(type_out) + "** %ret.buff.ptr\n"
             code += "  br label %loopmap_head\n\n"
@@ -362,7 +362,7 @@ class Context:
             code += "  %a.elt = load " + str(type_in) + "* %a.elt.ptr\n"
             code += "  %res.fct = call " + str(type_out) + " %f(" + str(type_in) + " %a.elt)\n"
             code += "  %ret.buff = load " + str(type_out) + "** %ret.buff.ptr\n"
-            code += "  %ret.elt.ptr = getelementptr " + str(type_out) + "* %ct.buff, i32 %index\n"
+            code += "  %ret.elt.ptr = getelementptr " + str(type_out) + "* %ret.buff, i32 %index\n"
             code += "  store " + str(type_out) + " %res.fct, " + str(type_out) + "* %ret.elt.ptr\n"
             code += "  br label %loopmap_close\n\n"
 
@@ -389,15 +389,17 @@ class Context:
         for name, t in self.reduce_functions.values():
             te = ArrayType(t)
             fct_t = FunctionType(t, [t, t])
-            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + "* %a) {\n"
+            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + " %aarg) {\n"
+            code += "  %a = alloca " + str(te) + "\n"
+            code += "  store " + str(te) + " %aarg, " + str(te) + "* %a"
             code += "  %a.buff.ptr = getelementptr " + str(te) + " * %a, i32 0, i32 1\n"
             code += "  %a.buff = load " + str(t) + "** %a.buff.ptr\n"
             code += "  %a.elt0.ptr = getelementptr " + str(t) + "* %a.buff, i32 0\n"
             code += "  %a.elt0 = load " + str(t) + "* %a.elt0.ptr\n"
             code += "  %a.elt1.ptr = getelementptr " + str(t) + "* %a.buff, i32 1\n"
             code += "  %a.elt1 = load " + str(t) + "* %a.elt1.ptr\n"
-            code += "  %ret = alloca " + str(te) + "\n"
-            code += "  %init = call " + str(te) + " %f(" + str(te) + " %a.elt0, " + str(te) + " %a.elt1)\n"
+            code += "  %ret = alloca " + str(t) + "\n"
+            code += "  %init = call " + str(t) + " %f(" + str(t) + " %a.elt0, " + str(t) + " %a.elt1)\n"
             code += "  store " + str(t) + " %init, " + str(t) + "* %ret\n"
 
             code += "  %i = alloca i32\n"
