@@ -325,10 +325,56 @@ class Context:
         for name, type_in, type_out in self.map_functions.values():
             ti = ArrayType(type_in)
             to = ArrayType(type_out)
-            fct_t = FunctionType(to, [ti])
-            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %t) {\n"
-            code += "; ... \n"
-            code += "\n"
+            fct_t = FunctionType(type_out, [type_in])
+            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %a) {\n"
+
+            code += "  ;define and initilize i\n"
+            code += "  %i = alloca i32\n"
+            code += "  store i32 0, i32* %i\n"
+            code += "  ;get the size of the array\n"
+            code += "  %size.ptr = getelementptr "+ str(ti) + "* %a, i32 0, i32 0\n"
+            code += "  %size = load i32* %size.ptr\n"
+            code += "  ;allocate the array to be returned\n"
+            code += "  %ret = alloca " + str(to) + "\n"
+            code += "  %ret.size = getelementptr " + str(to) + "* %ret, i32 0, i32 0\n"
+            code += "  store i32 %size, i32* %ret.size\n"
+            code += "  %may.allocate = icmp eq i32 %size, 0\n"
+            code += "  br i1 %may.allocate, label %loopmap_exit, label %allocation\n\n"
+
+            code += "  allocation:\n"
+            code += "  %ret.buff.bytesize.i32 = mul i32 %size, " + str(sizeof(type_out)) + "\n"
+            code += "  %ret.buff.bytesize.i64 = sext i32 %ret.buff.bytesize.i32 to i64\n"
+            code += "  %ret.buff.i8 = call i8* @malloc(i64 %ret.buff.bytesize.i64)\n"
+            code += "  %ret.buff.tyout = bitcast i8* %ret.alloc.i8 to " + str(type_out) + "*\n"
+            code += "  %ret.buff.ptr = getelementptr " + str(to) + "* %ret, i32 0, i32 1\n"
+            code += "  store i32* %ret.buff, " + str(type_out) + "** %ret.buff.ptr\n"
+            code += "  br label %loopmap_head\n\n"
+
+            code += "loopmap_head:\n"
+            code += "  %index = load i32* %i\n"
+            code += "  %again = icmp slt i32 %index, %size\n"
+            code += "  br i1 %again, label %loopmap_body, label %loopmap_exit\n\n"
+
+            code += "loopmap_body:\n"
+            code += "  %a.buff.ptr = getelementptr "+ str(ti) + "* %a, i32 0, i32 1\n"
+            code += "  %a.buff = load " + str(type_in) + "** %a.buff.ptr\n"
+            code += "  %a.elt.ptr = getelementptr " + str(type_in) + "* %a.buff, i32 %index\n"
+            code += "  %a.elt = load " + str(type_in) + "* %a.elt.ptr\n"
+            code += "  %res.fct = call " + str(type_out) + " %f(" + str(type_in) + " %a.elt)\n"
+            code += "  %ret.buff = load " + str(type_out) + "** %ret.buff.ptr\n"
+            code += "  %ret.elt.ptr = getelementptr " + str(type_out) + "* %ct.buff, i32 %index\n"
+            code += "  store " + str(type_out) + " %res.fct, " + str(type_out) + "* %ret.elt.ptr\n"
+            code += "  br label %loopmap_close\n\n"
+
+            code += "loopmap_close:\n"
+            code += "  %index.next = add i32 %index, 1\n"
+            code += "  store i32 %index.next, i32* %i\n"
+            code += "  br label %loopmap_head\n\n"
+
+            code += "loopmap_exit:\n"
+            code += "  %ret.struct = load " + str(to) + "* %ret\n"
+            code += "  ret " + str(to) + "%ret.struct\n"
+            code += "}\n\n"
         return code
 
     def getReduceFunction(self, t):
