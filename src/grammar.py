@@ -341,25 +341,43 @@ def p_primary_expression_sconst(p):
     # escape string ad add it to data segment
     global_string, _, l = cc.addText(p.lineno(1), p[1])
     t = ArrayType(ValueType.CHAR)
-    # create structure for the corresponding char table
-    reg = newReg()
-    code = reg + " = alloca " + str(t) + "\n"
-    # set its size
-    reg_size_ptr = newReg()
-    code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
-    code += "store i32 " + str(l) + ", i32* " + reg_size_ptr + "\n"
-    # allocate a char buffer
-    # size allocated has +1 in order not to allocate 0 byte for the empty string #security
+    # get a register containing a char array
+    tmp_r = newReg()
+    code = tmp_r + " = alloca " + str(t) + "\n"
+    r1 = newReg()
+    code += r1 + " = load " + str(t) + "* " + tmp_r + "\n"
+    # store the size of the string
+    r2 = newReg()
+    code += r2 + " = insertvalue " + str(t) + " " + r1 + ", i32 " + str(l) + ", 0\n"
+    # allocate and store string buffer
     allocated_buff = newReg()
-    code += allocated_buff + " = call i8* @malloc(i64 " + str(l + 1) + ")\n"
-    # store it in char table structure
-    reg_buff_ptr = newReg()
-    code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
-    code += "store i8* " + allocated_buff + ", i8** " + reg_buff_ptr + "\n"
-    # get global string buffer and copy it in char table buffer
+    code += allocated_buff + " = call i8* @malloc(i64 " + str(l + 1) + ")\n" # +1 to avoid allocating 0 bytes for empty strings #security
+    reg = newReg()
+    code += reg + " = insertvalue " + str(t) + " " + r2 + ", i8* " + allocated_buff + ", 1\n"
     reg_global_string_ptr = newReg()
     code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
     code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
+
+    ## create structure for the corresponding char table
+    #reg = newReg()
+    #code = reg + " = alloca " + str(t) + "\n"
+    ## set its size
+    #reg_size_ptr = newReg()
+    #code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
+    #code += "store i32 " + str(l) + ", i32* " + reg_size_ptr + "\n"
+    ## allocate a char buffer
+    ## size allocated has +1 in order not to allocate 0 byte for the empty string #security
+    #allocated_buff = newReg()
+    #code += allocated_buff + " = call i8* @malloc(i64 " + str(l + 1) + ")\n"
+    ## store it in char table structure
+    #reg_buff_ptr = newReg()
+    #code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
+    #code += "store i8* " + allocated_buff + ", i8** " + reg_buff_ptr + "\n"
+    ## get global string buffer and copy it in char table buffer
+    #reg_global_string_ptr = newReg()
+    #code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
+    #code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
+
     # this is it
     p[0] = {"type" : t, "code" : code, "reg" : reg}
 
@@ -466,6 +484,13 @@ def p_primary_expression_id_paren(p):
         r = newReg()
         code = r + " = " + code
 
+        # if returning an array, allocate result to use it as a pointer
+        #if t.getReturnType().isArray():
+        #    tmp_r = r
+        #    r = newReg()
+        #    code += r + " = alloca " + t.getReturnType() + "\n"
+        #    code += "store " + str(t.getReturnType()) + " " + tmp_r + ", " + t.getReturnType() + "* " + r + "\n"
+
     p[0] = {"type" : t.getReturnType(), "code" : code, "reg" : r}
 
 
@@ -496,6 +521,13 @@ def p_primary_expression_id_paren_args(p):
         r = newReg()
         code = r + " = " + code
 
+        # if returning an array, allocate result to use it as a pointer
+        #if t.getReturnType().isArray():
+        #    tmp_r = r
+        #    r = newReg()
+        #    code += r + " = alloca " + t.getReturnType() + "\n"
+        #    code += "store " + str(t.getReturnType()) + " " + tmp_r + ", " + t.getReturnType() + "* " + r + "\n"
+
     p[0] = {"type" : t.getReturnType(), "code" : p[3]["code"] + code, "reg" : r}
 
 
@@ -509,6 +541,8 @@ def p_primary_expression_id_plusplus(p):
         op = "add"
     elif t.equals(ValueType.FLOAT):
         op = "fadd"
+    else:
+        error(p.lineno(0), "Trying to increment something not a value.")
 
     r = cc.getAddr(p[1])
     r1 = newReg()
@@ -530,6 +564,8 @@ def p_primary_expression_id_minusminus(p):
         op = "sub"
     elif t.equals(ValueType.FLOAT):
         op = "fsub"
+    else:
+        error(p.lineno(0), "Trying to decrement something not a value.")
 
     r = cc.getAddr(p[1])
     r1 = newReg()

@@ -328,7 +328,7 @@ class Context:
             fct_t = FunctionType(to, [ti])
             code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %t) {\n"
             code += "; ... \n"
-            code += "\n"
+            code += "}\n"
         return code
 
     def getReduceFunction(self, t):
