@@ -127,9 +127,9 @@ def p_parameter_declaration(p):
     if t.isValue() or t.isFunction():
         init += "store " + str(t) + " " + r_a + ", " + str(t) + "* " + r + "\n" # copy value
     elif t.isArray():
-        raise NotImplemented
-        # TODO: copy struct entries
-        init += "getelementptr ... \n"
+        reg_res = newReg()
+        init += reg_res + " = load " + str(t) + "* " + r_a + "\n"
+        init += "store " + str(t) + " " + reg_res + ", " + str(t) + "* " + r + "\n"
     p[0] = {"type" : t,
             "code" : str(t) + " " + r_a,
             "init" : init}
@@ -318,31 +318,51 @@ def p_primary_expression_fconst(p):
 
 
 def escape_string(lineno, s):
-    '''returns the string s with escaped or non-pritable characters replaced by ANSI code'''
-    if sys.version_info[0] >= 3:
+    '''returns the string s with escaped or non-pritable characters replaced by ASCII code'''
+    if sys.version_info[0] >= 3: # escape string, depending on python version
         s2 = bytes(s[1:-1], "utf-8").decode("unicode_escape")
     else:
         s2 = s[1:-1].decode('string_escape')
     p = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ " #string.printable[:-5] # all printable chars except \n \t \r ...
-    r = ""
+    r = []
     for i in range(len(s2)):
         if ord(s2[i]) >= 128: # not ascii
-            #error(lineno, "The character no " + str(i) + " of the string is not ASCII.")
-            print "error" + str(ord(s2[i]))
+            error(lineno, "The character no " + str(i) + " of the string is not ASCII.")
         elif s2[i] in p:
-            r += s2[i]
+            r.append(s2[i])
         else:
             c = hex(ord(s2[i]))[2:]
-            r += "\\" + "0" * (2 - len(c)) + c.upper()
-    return r
+            r.append("\\" + "0" * (2 - len(c)) + c.upper())
+    return "".join(r)
+
 
 def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
     global cc
-    s = cc.addText(escape_string(p.lineno(1), p[1]))
+    # escape string ad add it to data segment
+    global_string = cc.addText(escape_string(p.lineno(1), p[1]))
     l = len(p[1]) - 2
-    reg = "getelementptr([" + str(l) + " x i8]* " + s + ", i32 0, i32 0)"
+    # create structure for the corresponding char table
+    reg = newReg()
+    code = reg + " = alloca { i32, i8* }\n"
+    # set its size
+    reg_size_ptr = newReg()
+    code += reg_size_ptr + " = getelementptr { i32, i8* }* " + reg + ", i32 0, i32 0\n"
+    code += "store i32 " + str(l) + ", i32* " + reg_size_ptr + "\n"
+    # allocate a char buffer
+    allocated_buff = newReg()
+    code += allocated_buff + " = call i8* @malloc(i64 " + str(l) + ")\n"
+    # store it in char table structure
+    reg_buff_ptr = newReg()
+    code += reg_buff_ptr + " = getelementptr { i32, i8* }* " + reg + ", i32 0, i32 1\n"
+    code += "store i8* " + allocated_buff + ", i8** " + reg_buff_ptr + "\n"
+    # get global string buffer and copy it in char table buffer
+    reg_global_string_ptr = newReg()
+    code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
+    code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
+    # this is it
     p[0] = {"type" : ArrayType(ValueType.CHAR, cc), "code" : "", "reg" : reg}
+
 
 def p_primary_expression_cconst(p):
     '''primary_expression : CCONST'''

@@ -44,14 +44,15 @@ else:
     print(cc.generateArrayType())
     print(result["code"])
     with open(sys.argv[2], "w") as f:
-        f.write("declare i8* @malloc(i64)")
+        f.write("declare i8* @malloc(i64)\n")
+        f.write("declare i8* @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)\n")
         seg = cc.generateText()
         if seg != "":
             f.write("; Constant text\n")
             f.write(seg)
-        at = cc.generateArrayType()
-        if at != "":
-            f.write("; Array types\n")
-            f.write(at)
+        #at = cc.generateArrayType()
+        #if at != "":
+        #    f.write("; Array types\n")
+        #    f.write(at)
         f.write("\n; Main segment\n")
         f.write(result["code"])
