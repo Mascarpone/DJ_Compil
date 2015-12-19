@@ -9,8 +9,6 @@
  *      Affichage de "Bravo compilateur !", suivi d'un retour à la ligne.
  */
 
-extern void print(char[] c);
-
 int main()
 {
     int i = 0;
