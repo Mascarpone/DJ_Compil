@@ -48,10 +48,10 @@ else:
     with open(sys.argv[2], "w") as f:
         f.write("declare i8* @malloc(i64)\n")
         f.write("declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)\n")
-        #f.write("declare void @printchar(i8)\n")
-        #f.write("declare void @printint(i32)\n")
-        #f.write("declare void @printfloat(float)\n")
-        #f.write("declare void @print({i32,i8*}*)\n")
+        f.write("declare void @printchar(i8)\n")
+        f.write("declare void @printint(i32)\n")
+        f.write("declare void @printfloat(float)\n")
+        f.write("declare void @print({i32,i8*}*)\n")
         seg = cc.generateText()
         if seg != "":
             f.write("\n; Global strings\n")
