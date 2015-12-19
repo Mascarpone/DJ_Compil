@@ -259,6 +259,7 @@ def p_declaration_1(p):
                     code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
                     code += "store " + str(t.getElementsType()) + "* " + cast_allocated + ", " + str(t.getElementsType()) + "** " + reg_buff_ptr + "\n"
     p[0] = {"code" : code,
+            "reg" : reg,
             "type" : t}
 
 
@@ -294,14 +295,17 @@ def p_primary_expression_id(p):
 
     p[0] = {"type" : t}
     # when its a value, generate load code
-    if t.isValue() or (t.isFunction() and r[0] == "%") or t.isArray():
+    if t.isValue() or (t.isFunction() and r[0] == "%"):
         p[0]["reg"] = newReg() # register for the value
         p[0]["code"] = p[0]["reg"] + " = load " + str(t) + "* " + r + "\n"
         p[0]["addr"] = r # keep address for affectation statement
     elif t.isFunction(): # starts with "@"
         p[0]["reg"] = r
         p[0]["code"] = ""
-
+    elif t.isArray():
+        p[0]["reg"] = r
+        p[0]["addr"] = r
+        p[0]["code"] = ""
 
 def p_primary_expression_iconst(p):
     '''primary_expression : ICONST'''
@@ -332,20 +336,13 @@ def escape_string(lineno, s):
             r += "\\" + "0" * (2 - len(c)) + c.upper()
     return r
 
-
 def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
-    s = newGBVar()
+    global cc
+    s = cc.addText(escape_string(p.lineno(1), p[1]))
     l = len(p[1]) - 2
-    if sys.version_info[0] >= 3:
-        cstr = str(ord(bytes(p[1][1:-1], "utf-8").decode("unicode_escape")))
-    else:
-        cstr = str(ord(p[1][1:-1].decode('string_escape')))
-
-    setGB(s + " = internal constant [" + str(l) + " x i8] c\"" + cstr + "\"")
     reg = "getelementptr([" + str(l) + " x i8]* " + s + ", i32 0, i32 0)"
     p[0] = {"type" : ArrayType(ValueType.CHAR, cc), "code" : "", "reg" : reg}
-
 
 def p_primary_expression_cconst(p):
     '''primary_expression : CCONST'''
@@ -509,10 +506,23 @@ def p_postfix_expression_2(p):
     '''postfix_expression : postfix_expression LBRACKET expression RBRACKET'''
     if not p[1]["type"].isArray():
         error(p.lineno(0), "Trying to access to an element of something which is not an array.")
+    if not p[3]["type"].equals(ValueType.INT):
+        error(p.lineno(0), "The index of an array must be an integer.")
+
+    code = p[1]["code"] + p[3]["code"]
+    buff_ptr = newReg()
+    code += buff_ptr + " = getelementptr " + str(p[1]["type"]) + "* " + p[1]["addr"] + ", i32 0, i32 1\n"
+    buff = newReg()
+    code += buff + " = load " + str(p[1]["type"].getElementsType()) + "** " + buff_ptr + "\n"
+    elt_ptr = newReg()
+    code += elt_ptr + " = getelementptr " + str(p[1]["type"].getElementsType()) + "* " + buff + ", i32 " + p[3]["reg"] + "\n"
+    elt = newReg()
+    code += elt + " = load " + str(p[1]["type"].getElementsType()) + "* " + elt_ptr + "\n"
+
     p[0] = {"type" : p[1]["type"].getElementsType(),
-            "reg" : "newreg",
-            "addr" : "%register", #TODO : compute the right elementptr
-            "code" : "; postfix_expression:table"}
+            "reg" : elt,
+            "addr" : elt_ptr,
+            "code" : code}
     pass
 
 def p_argument_expression_list_1(p):
@@ -773,19 +783,25 @@ def p_expression_1(p):
 
 def p_expression_2(p):
     '''expression : unary_expression EQUALS comparison_expression'''
-    if p[1]["type"].isArray() or p[3]["type"].isArray():
-        raise NotImplemented
-
-    r3 = p[3]["reg"]
-    code = ""
-    if not p[3]["type"].equals(p[1]["type"]):
-        r3 = newReg()
-        code += convert(op2["reg"], op2["type"], t, r3, p.lineno(0)) #checks types
-
-    p[0] = {"code" : p[1]["code"] + p[3]["code"] + code
-                   + "store " + str(p[1]["type"]) + " " + r3 + ", " + str(p[1]["type"]) + "* " + p[1]["addr"] + "\n",
-            "reg" : r3,
-            "type" : p[1]["type"]}
+    if p[1]["type"].isArray() and p[3]["type"].isArray():
+        if not p[1]["type"].getElementsType().equals(p[3]["type"].getElementsType()):
+            error(p.lineno(0), "Affecting arrays of different types.")
+        code = p[1]["code"] + p[3]["code"]
+        comp_val = newReg()
+        code += comp_val + " = load " + str(p[3]["type"]) + "* " + p[3]["reg"] + "\n"
+        code += "store " + str(p[3]["type"]) + " " + comp_val + ", " + str(p[3]["type"]) + "* " + p[1]["reg"] + "\n"
+        p[0] = {"code" : code, "reg" : p[3]["reg"], "type" : p[3]["type"]}
+    else:
+        r3 = p[3]["reg"]
+        code = p[1]["code"] + p[3]["code"]
+        if not p[3]["type"].equals(p[1]["type"]):
+            r3 = newReg()
+            code += convert(op2["reg"], op2["type"], t, r3, p.lineno(0)) #checks types
+        code += "store " + str(p[1]["type"]) + " " + r3 + ", " + str(p[1]["type"]) + "* " + p[1]["addr"] + "\n"
+        p[0] = {"code" : code,
+                "reg" : r3,
+                "addr" : p[1]["addr"],
+                "type" : p[1]["type"]}
     pass
 
 def p_expression_3(p):

@@ -22,13 +22,13 @@ char foo (char i)
 
 int main()
 {
-    int T[5];
+    int[5] T;
     T[0] = 24;
     T[1] = 40;
     T[2] = 72;
     T[3] = 15;
     T[4] = 8;
-    char W[5] = map(foo, T);
+    char[5] W = map(foo, T);
 
     int i;
     for (i = 0; i < 5; i = i + 1) {

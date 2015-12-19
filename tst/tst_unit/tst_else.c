@@ -7,38 +7,37 @@
  *      Pas d'erreur.
  *
  * Le résultat attendu de l'exécution est :
- *      Affichage de "+.-" suivi d'un retour à la ligne.
+ *      Affichage de "+.-".
  *      Pas d'erreur.
  */
 
- extern void print(char a);
+ extern void printchar(char a);
 
 int main()
 {
     int a = 1;
     if(a > 0)
-        print("+");
+        printchar('+');
     else if(a == 0)
-        print(".");
+        printchar('.');
     else
-        print("-");
+        printchar('-');
 
     a--;
     if(a > 0)
-        print("+");
+        printchar('+');
     else if(a == 0)
-        print(".");
+        printchar('.');
     else
-        print("-");
+        printchar('-');
 
     a--;
     if(a > 0)
-        print("+");
+        printchar('+');
     else if(a == 0)
-        print(".");
+        printchar('.');
     else
-        print("-");
+        printchar('-');
 
-    print("\n");
     return 0;
 }

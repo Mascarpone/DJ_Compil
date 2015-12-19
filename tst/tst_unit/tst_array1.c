@@ -12,17 +12,21 @@
  *      affichage de "OK", suivi d'un retour à la ligne
  */
 
+//extern void print(char[] A);
+extern void printint(int i);
+
 int main()
 {
     int[3] A;
-    int[5] B;
-    
-    /*A[0] = 1;
+
+    A[0] = 1;
     A[1] = 2;
     A[2] = 3;
-    if(A[0] == 1 && A[1] == 2 && A[2] == 3)
-        print("OK\n");
+    if((A[0] == 1) && (A[1] == 2) && (A[2] == 3))
+        //print("OK\n");
+        printint(1);
     else
-        print("C'est moche...\n");*/
+        //print("C'est moche...\n");
+        printint(0);
     return 0;
 }
