@@ -6,7 +6,6 @@ PARSER=./src/DJ_compil.py
 BUILD_DIR=./build
 C_DIR=./tst
 LL_DIR=$(BUILD_DIR)/ll
-S_DIR=$(BUILD_DIR)/s
 BIN_DIR=$(BUILD_DIR)/bin
 
 TST_UNIT_C=$(wildcard ./tst/tst_unit/*.c)
@@ -25,9 +24,9 @@ $(LL_DIR)/%.ll: $(C_DIR)/%.c $(PARSER)
 	mkdir -p $(dir $@)
 	python $(PARSER) $< $@
 
-$(BIN_DIR)/%: $(S_DIR)/%.ll
+$(BIN_DIR)/%: $(LL_DIR)/%.ll
 	mkdir -p $(dir $@)
-	$(LLC) $(CFLAGS) -o $@ $< $(LIBS)
+	$(LLC) -o $@ $< $(LIBS)
 
 mrproper:
 	rm -rf $(BUILD_DIR)
