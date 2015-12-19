@@ -34,10 +34,10 @@ def p_external_declaration_2(p):
     '''external_declaration : declaration_statement'''
     p[0] = {"code" : p[1]["code"]}
 
-def p_external_declaration_3(p):
-    '''external_declaration : EXTERN declaration_statement'''
-    #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
-    p[0] = {"code" : "; declare external global " + p[2]["code"]}
+#def p_external_declaration_3(p):
+#    '''external_declaration : EXTERN declaration_statement'''
+#    #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
+#    p[0] = {"code" : "; declare external global " + p[2]["code"]}
 
 def p_external_declaration_4(p):
     '''external_declaration : EXTERN type_name function_declarator arguments_declaration SEMI'''
@@ -402,7 +402,18 @@ def p_primary_expression_map(p):
         error(p.lineno(5), "The function passed to 'map()' is not taking the expected number of arguments. Got '" + type2str(p[3]["type"].getArgsCount()) + "', expected 1.")
     if not p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()):
         error(p.lineno(1), "Incompatible types in 'map()'. You are trying to match '" + type2str(p[3]["type"].getArgType(0)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
-    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType(), cc), "code" : "; primary_expression_map", "reg" : "registre"}
+
+    map_fct = getMapFunction(p[3]["type"].getArgType(0), p[3]["type"].getReturnType())
+    p[0] = {"code" : p[3]["code"] + p[5]["code"]}
+    if p[3]["type"].getReturnType().equals(ValueType.VOID):
+        p[0]["type"] = ValueType.VOID
+        p[0]["reg"]  = None
+        p[0]["code"] += "call void " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+    else:
+        p[0]["type"] = ArrayType(p[3]["type"].getReturnType(), cc)
+        p[0]["reg"]  = newReg()
+        p[0]["code"] += p[0]["reg"] + " = call " + str(p[0]["type"]) + " " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType(), cc), "code" : code, "reg" : r}
 
 
 def p_primary_expression_reduce(p):
@@ -416,6 +427,7 @@ def p_primary_expression_reduce(p):
         error(p.lineno(5), "The function passed to 'reduce()' is not taking the expected number of arguments. Got '" + str(p[3]["type"].getArgsCount()) + "', expected 2.")
     if not p[3]["type"].getReturnType().equals(p[5]["type"].getElementsType()) or not p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()) or not p[3]["type"].getArgType(1).equals(p[5]["type"].getElementsType()):
         error(p.lineno(1), "Incompatible types in 'reduce()'. You are trying to match '" + type2str(p[3]["type"].getReturnType()) + "', '" + type2str(p[3]["type"].getArgType(0)) + "', '" + type2str(p[3]["type"].getArgType(1)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
+    # forbid void types
     p[0] = {"type" : p[3]["type"].getReturnType(), "code" : "; primary_expression_reduce", "reg" : "registre"}
 
 
