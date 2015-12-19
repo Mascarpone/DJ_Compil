@@ -144,7 +144,7 @@ class FunctionType(Type):
             return False
 
     def __str__(self):
-        return self.r + "(" + ", ".join(self.a) + ")*"
+        return (str(self.r) + "(" + ", ".join(map(str,self.a)) + ")*")
 
 
 class ArrayType(Type):
@@ -388,46 +388,10 @@ class Context:
         code = ""
         for name, t in self.reduce_functions.values():
             te = ArrayType(t)
-            fct_t = FunctionType(t, [t, t])
-            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + "* %a) {\n"
-            code += "  %a.buff.ptr = getelementptr " + str(te) + " * %a, i32 0, i32 1\n"
-            code += "  %a.buff = load " + str(t) + "** %a.buff.ptr\n"
-            code += "  %a.elt0.ptr = getelementptr " + str(t) + "* %a.buff, i32 0\n"
-            code += "  %a.elt0 = load " + str(t) + "* %a.elt0.ptr\n"
-            code += "  %a.elt1.ptr = getelementptr " + str(t) + "* %a.buff, i32 1\n"
-            code += "  %a.elt1 = load " + str(t) + "* %a.elt1.ptr\n"
-            code += "  %ret = alloca " + str(te) + "\n"
-            code += "  %init = call " + str(te) + " %f(" + str(te) + " %a.elt0, " + str(te) + " %a.elt1)\n"
-            code += "  store " + str(t) + " %init, " + str(t) + "* %ret\n"
-
-            code += "  %i = alloca i32\n"
-            code += "  store i32 2, i32* %i\n"
-            code += "  %size.ptr = getelementptr " + str(te) + "* %a, i32 0, i32 0\n"
-            code += "  %size = load i32* %size.ptr\n"
-            code += "  br label %loopreduce_head\n\n"
-
-            code += "loopreduce_head:\n"
-            code += "  %index = load i32* %i\n"
-            code += "  %again = icmp slt i32 %index, %size\n"
-            code += "  br i1 %again, label %loopreduce_body, label %loopreduce_exit\n\n"
-
-            code += "loopreduce_body:\n"
-            code += "  %ret.val = load " + str(t) + "* %ret\n"
-            code += "  %a.elt.ptr = getelementptr " + str(t) + "* %a.buff, i32 %index\n"
-            code += "  %a.elt = load " + str(t) + "* %a.elt.ptr\n"
-            code += "  %res = call " + str(t) + " %f(" + str(t) + " %ret.val, " + str(t) + " %a.elt)\n"
-            code += "  store " + str(t) + " %res, " + str(t) + "* %ret\n"
-            code += "  br label %loopreduce_close\n\n"
-
-            code += "loopreduce_close:\n"
-            code += "  %index.next = add i32 %index, 1\n"
-            code += "  store i32 %index.next, i32* %i\n"
-            code += "  br label %loopreduce_head\n\n"
-
-            code += "loopreduce_exit:\n"
-            code += "  %ret.value = load " + str(t) + "* %ret\n"
-            code += "  ret " + str(t) + " %ret.value\n"
-            code += "}\n\n"
+            fct_t = FunctionType(te, [te, te])
+            code += "define " + str(te) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %t) {\n"
+            code += "; ... \n"
+            code += "\n"
         return code
 
 
