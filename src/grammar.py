@@ -246,15 +246,6 @@ def p_declaration_1(p):
                 reg_res = newReg()
                 code += reg_res + " = load " + str(d["type"]) + "* " + d["reg"] + "\n"
                 code += "store " + str(d["type"]) + " " + reg_res + ", " + str(t) + "* " + reg + "\n"
-                # copy size entry
-                #reg_size_res_ptr = newReg()
-                #code += reg_size_ptr + " = getelementptr " + str(d["type"]) + "* " + d["reg"] + ", i32 0, i32 0\n"
-                #reg_size_res = newReg()
-                #code += "load i32* " + reg_size_res_ptr + "\n"
-                #reg_size_ptr = newReg()
-                #code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
-                #code += "store i32 " + reg_size + ", i32* " + reg_size_ptr + "\n"
-                # copy buffer entry
         else:
             if t.isValue():
                 code += "store " + str(t) + " 0, " + str(t) + "* " + reg + "\n"
@@ -282,6 +273,7 @@ def p_declaration_1(p):
 def p_declarator_1(p):
     '''declarator : ID'''
     p[0] = {"name" : p[1],
+            "reg" : None,
             "code" : None,
             "type" : None}
 
@@ -289,6 +281,7 @@ def p_declarator_1(p):
 def p_declarator_2(p):
     '''declarator : ID EQUALS expression'''
     p[0] = {"name" : p[1],
+            "reg" : p[3]["reg"],
             "code" : p[3]["code"],
             "type" : p[3]["type"]}
 
