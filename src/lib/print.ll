@@ -2,25 +2,20 @@
 
 declare void @printchar(i8)
 
-%chartable = type {
-  i32, ; size
-  i8*  ; content
-}
-
-define void @print(%chartable* %ct) {
+define void @print({ i32, i8* }* %ct) {
   %i = alloca i32
   store i32 0, i32* %i
   br label %loopprint_head
 
 loopprint_head:
   %index = load i32* %i
-  %size.ptr = getelementptr %chartable* %ct, i32 0, i32 0
+  %size.ptr = getelementptr { i32, i8* }* %ct, i32 0, i32 0
   %size = load i32* %size.ptr
   %again = icmp slt i32 %index, %size
   br i1 %again, label %loopprint_body, label %loopprint_exit
 
 loopprint_body:
-  %ct.buff.ptr = getelementptr %chartable* %ct, i32 0, i32 1
+  %ct.buff.ptr = getelementptr { i32, i8* }* %ct, i32 0, i32 1
   %ct.buff = load i8** %ct.buff.ptr
   %ct.elt.ptr = getelementptr i8* %ct.buff, i32 %index
   %ct.elt = load i8* %ct.elt.ptr

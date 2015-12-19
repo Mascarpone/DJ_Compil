@@ -12,11 +12,11 @@
 
 
 int main() {
-    
-    int A[10];
-    char B[];
-    
+
+    int[10] A;
+    char[] B;
+
     B = A;
-    
+
     return 0;
 }

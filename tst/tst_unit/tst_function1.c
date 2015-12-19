@@ -9,7 +9,6 @@
  *      Affichage de "3" suivi d'un retour à la ligne.
  */
 
-extern void printint(int i);
 
 int foo()
 {
@@ -19,6 +18,6 @@ int foo()
 int main()
 {
     printint(foo());
-    //print("\n");
+    print("\n");
     return 0;
 }

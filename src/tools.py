@@ -149,9 +149,9 @@ class FunctionType(Type):
 
 class ArrayType(Type):
     '''A generic class to decribe types'''
-    def __init__(self, elt, cc):
-        self.cc = cc
+    def __init__(self, elt, isptr = False):
         self.elt = elt
+        self.isptr = isptr
 
     def isArray(self):
         return True
@@ -169,8 +169,10 @@ class ArrayType(Type):
             return False
 
     def __str__(self):
-        return "{ i32, " + str(self.elt) + " }"
-        #return self.cc.array_types[str(self.elt)]
+        if self.isptr:
+            return "{ i32, " + str(self.elt) + "* }*"
+        else:
+            return "{ i32, " + str(self.elt) + "* }"
 
 
 def type2str(t):
@@ -296,10 +298,11 @@ class Context:
             self.id_addr = self.prev.id_addr
             self.prev = self.prev.prev
 
-    def addText(self, text):
+    def addText(self, lineno, text):
         '''adds a new constant string'''
         if not text in self.text:
-            self.text[text] = "@str" + str(self.text_counter)
+            esc = escape_string(lineno, text)
+            self.text[text] = ("@str" + str(self.text_counter), esc[1], esc[0])
             self.text_counter += 1
         return self.text[text]
 
@@ -307,8 +310,7 @@ class Context:
         '''returns the code defining the constant strings'''
         code = ""
         for text, text_var in self.text.items():
-            l = len(text)
-            code += text_var + " = internal constant [" + str(l) + " x i8] c\"" + text + "\"\n"
+            code += text_var[0] + " = internal constant [" + str(text_var[1]) + " x i8] c\"" + text_var[2] + "\"\n"
         return code
 
 
@@ -352,6 +354,26 @@ def float_to_hex(value):
     intrep = struct.unpack('Q', raw)[0]
     out = '{{0:#{0}x}}'.format(16).format(intrep)
     return out
+
+
+def escape_string(lineno, s):
+    '''returns the string s with escaped or non-pritable characters replaced by ASCII code'''
+    if sys.version_info[0] >= 3: # escape string, depending on python version
+        s2 = bytes(s[1:-1], "utf-8").decode("unicode_escape")
+    else:
+        s2 = s[1:-1].decode('string_escape')
+    p = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ " #string.printable[:-5] # all printable chars except \n \t \r ...
+    r = []
+    l = len(s2)
+    for i in range(len(s2)):
+        if ord(s2[i]) >= 128: # not ascii
+            error(lineno, "The character no " + str(i) + " of the string is not ASCII.")
+        elif s2[i] in p:
+            r.append(s2[i])
+        else:
+            c = hex(ord(s2[i]))[2:]
+            r.append("\\" + "0" * (2 - len(c)) + c.upper())
+    return ("".join(r), l)
 
 
 def checkGenericErrors(cc, result):

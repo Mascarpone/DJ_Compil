@@ -13,8 +13,8 @@
 
 int main() {
 
-    int A[10];
-    char c;
+    char[10] A;
+    int c;
 
     A[0] = c;
 

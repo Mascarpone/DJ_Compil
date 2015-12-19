@@ -14,6 +14,21 @@ from ply import yacc as yacc
 cc = Context()
 
 
+# print lib
+# printchar
+cc.setType("printchar", FunctionType(ValueType.VOID, [ValueType.CHAR]))
+cc.setAddr("printchar", "@printchar")
+# printint
+cc.setType("printint", FunctionType(ValueType.VOID, [ValueType.INT]))
+cc.setAddr("printint", "@printint")
+# printfloat
+cc.setType("printfloat", FunctionType(ValueType.VOID, [ValueType.FLOAT]))
+cc.setAddr("printfloat", "@printfloat")
+# print
+cc.setType("print", FunctionType(ValueType.VOID, [ArrayType(ValueType.CHAR, True)]))
+cc.setAddr("print", "@print")
+
+
 # first rule because it's the starting symbol
 def p_program_1(p):
     '''program : program external_declaration'''
@@ -34,10 +49,12 @@ def p_external_declaration_2(p):
     '''external_declaration : declaration_statement'''
     p[0] = {"code" : p[1]["code"]}
 
+
 def p_external_declaration_3(p):
     '''external_declaration : EXTERN declaration_statement'''
     #FIXME : ici ce sont des variables globales externes. Ca se déclare sous la forme @G = external global i32
     p[0] = {"code" : "; declare external global " + p[2]["code"]}
+
 
 def p_external_declaration_4(p):
     '''external_declaration : EXTERN type_name function_declarator arguments_declaration SEMI'''
@@ -157,13 +174,13 @@ def p_type_name_4(p):
 
 def p_type_name_5_1(p):
     '''type_name : type_name LBRACKET RBRACKET'''
-    p[0] = {"type" : ArrayType(p[1]["type"], cc),
+    p[0] = {"type" : ArrayType(p[1]["type"]),
             "size" : None}
 
 
 def p_type_name_5_2(p):
     '''type_name : type_name LBRACKET ICONST RBRACKET'''
-    p[0] = {"type" : ArrayType(p[1]["type"], cc),
+    p[0] = {"type" : ArrayType(p[1]["type"]),
             "size" : int(p[3])}
 
 
@@ -318,31 +335,13 @@ def p_primary_expression_fconst(p):
     p[0] = {"type" : ValueType.FLOAT, "code" : "", "reg" : float_to_hex(float(p[1]))}
 
 
-def escape_string(lineno, s):
-    '''returns the string s with escaped or non-pritable characters replaced by ASCII code'''
-    if sys.version_info[0] >= 3: # escape string, depending on python version
-        s2 = bytes(s[1:-1], "utf-8").decode("unicode_escape")
-    else:
-        s2 = s[1:-1].decode('string_escape')
-    p = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ " #string.printable[:-5] # all printable chars except \n \t \r ...
-    r = []
-    for i in range(len(s2)):
-        if ord(s2[i]) >= 128: # not ascii
-            error(lineno, "The character no " + str(i) + " of the string is not ASCII.")
-        elif s2[i] in p:
-            r.append(s2[i])
-        else:
-            c = hex(ord(s2[i]))[2:]
-            r.append("\\" + "0" * (2 - len(c)) + c.upper())
-    return "".join(r)
-
-
 def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
     global cc
     # escape string ad add it to data segment
-    global_string = cc.addText(escape_string(p.lineno(1), p[1]))
-    l = len(p[1]) - 2
+    glob_var = cc.addText(p.lineno(1), p[1])
+    global_string = glob_var[0]
+    l = glob_var[1]
     # create structure for the corresponding char table
     reg = newReg()
     code = reg + " = alloca { i32, i8* }\n"
@@ -363,7 +362,7 @@ def p_primary_expression_sconst(p):
     code += reg_global_string_ptr + " = getelementptr [" + str(l) + " x i8]* " + global_string + ", i64 0, i64 0\n"
     code += "call i8* @llvm.memcpy.p0i8.p0i8.i32(i8* " + allocated_buff + ", i8* " + reg_global_string_ptr + ", i32 " + str(l) + ", i32 1, i1 false)\n"
     # this is it
-    p[0] = {"type" : ArrayType(ValueType.CHAR, cc), "code" : "", "reg" : reg}
+    p[0] = {"type" : ArrayType(ValueType.CHAR, True), "code" : code, "reg" : reg}
 
 
 def p_primary_expression_cconst(p):
@@ -404,7 +403,7 @@ def p_primary_expression_map(p):
         error(p.lineno(5), "The function passed to 'map()' is not taking the expected number of arguments. Got '" + type2str(p[3]["type"].getArgsCount()) + "', expected 1.")
     if not p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()):
         error(p.lineno(1), "Incompatible types in 'map()'. You are trying to match '" + type2str(p[3]["type"].getArgType(0)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
-    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType(), cc), "code" : "; primary_expression_map", "reg" : "registre"}
+    p[0] = {"type" : ArrayType(p[3]["type"].getReturnType()), "code" : "; primary_expression_map", "reg" : "registre"}
 
 
 def p_primary_expression_reduce(p):
@@ -427,7 +426,7 @@ def p_primary_expression_id_paren(p):
     if not cc.exists(p[1]):
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
     t = cc.getType(p[1])
-    if not isFunction(t):
+    if not t.isFunction():
         error(p.lineno(1), "You are trying to call '" + p[1] + "', which is not a function.")
     if t.getArgsCount() != 0:
         error(p.lineno(1), "Invalid number of arguments. Got " + str(t.getArgsCount()) + " but expected 0.")
@@ -492,7 +491,7 @@ def p_primary_expression_id_plusplus(p):
             "code" :   r1 + " = load " + str(t) + "* " + r + "\n"
                      + r2 + " = " + op + " " + str(t) + " " + r1 + ", 1 \n"
                      + "store " + str(t) + " " + r2 + ", " + str(t) + "* " + r + "\n"}
-                     
+
 
 def p_primary_expression_id_minusminus(p):
     '''primary_expression : ID MINUSMINUS'''
@@ -705,7 +704,7 @@ def p_additive_expression_4(p):
 
     p[0] = {"reg"  : booli32_cmpto0,
             "code" : add["code"]
-                   + booli1_cmpto0 + " = icmp eq " + str(add["type"]) + " " + add["reg"] + ", 0 \n"
+                   + booli1_cmpto0 + " = icmp ne " + str(add["type"]) + " " + add["reg"] + ", 0 \n"
                    + booli32_cmpto0 + " = zext i1 " + booli1_cmpto0 + " to i32\n",
             "type" : ValueType.INT}
 
@@ -735,7 +734,7 @@ def p_multiplicative_expression_5(p):
 
     p[0] = {"reg"  : booli32_cmpto0,
             "code" : mul["code"]
-                   + booli1_cmpto0 + " = icmp eq " + str(mul["type"]) + " " + mul["reg"] + ", 0 \n"
+                   + booli1_cmpto0 + " = icmp ne " + str(mul["type"]) + " " + mul["reg"] + ", 0 \n"
                    + booli32_cmpto0 + " = zext i1 " + booli1_cmpto0 + " to i32\n",
             "type" : ValueType.INT}
 

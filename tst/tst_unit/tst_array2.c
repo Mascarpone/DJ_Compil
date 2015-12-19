@@ -9,8 +9,6 @@
  *      affichage de "OK", suivi d'un retour à la ligne
  */
 
-extern void printint(int i);
-
 int main()
 {
     int[1] A;
@@ -20,10 +18,8 @@ int main()
     int[] B;
     B = A;
     if((B[0] == 1) && (B[1] == 2) && (B[2] == 3))
-        //print("OK\n");
-        printint(1);
+        print("OK\n");
     else
-        //print("C'est moche...\n");
-        printint(0);
+        print("C'est moche...\n");
     return 0;
 }
