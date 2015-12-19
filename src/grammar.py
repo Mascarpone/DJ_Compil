@@ -276,14 +276,12 @@ def p_declaration_1(p):
                     code += reg_buff_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 1\n"
                     code += "store " + str(t.getElementsType()) + "* " + cast_allocated + ", " + str(t.getElementsType()) + "** " + reg_buff_ptr + "\n"
     p[0] = {"code" : code,
-            "reg" : reg,
             "type" : t}
 
 
 def p_declarator_1(p):
     '''declarator : ID'''
     p[0] = {"name" : p[1],
-            "reg" : None,
             "code" : None,
             "type" : None}
 
@@ -291,7 +289,6 @@ def p_declarator_1(p):
 def p_declarator_2(p):
     '''declarator : ID EQUALS expression'''
     p[0] = {"name" : p[1],
-            "reg" : p[3]["reg"],
             "code" : p[3]["code"],
             "type" : p[3]["type"]}
 
@@ -312,16 +309,12 @@ def p_primary_expression_id(p):
 
     p[0] = {"type" : t}
     # when its a value, generate load code
-    if t.isValue() or (t.isFunction() and r[0] == "%"):
+    if t.isValue() or (t.isFunction() and r[0] == "%") or t.isArray():
         p[0]["reg"] = newReg() # register for the value
         p[0]["code"] = p[0]["reg"] + " = load " + str(t) + "* " + r + "\n"
         p[0]["addr"] = r # keep address for affectation statement
     elif t.isFunction(): # starts with "@"
         p[0]["reg"] = r
-        p[0]["code"] = ""
-    elif t.isArray():
-        p[0]["reg"] = r
-        p[0]["addr"] = r
         p[0]["code"] = ""
 
 
