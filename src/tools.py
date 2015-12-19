@@ -203,6 +203,8 @@ class Context:
         self.return_types_found = []                # used to check if returned values have a good type
         self.text = {}                              # strings that will be definded as global variables. key = string, value = global name
         self.text_counter = 0                       # a counter to name strings
+        self.map_functions = {}                     # used to generate map functions for each type of parameters
+        self.map_functions_counter = 0              # counter for map functions
 
 
     def getParent(self):
@@ -302,7 +304,7 @@ class Context:
         '''adds a new constant string'''
         if not text in self.text:
             esc = escape_string(lineno, text)
-            self.text[text] = ("@str" + str(self.text_counter), esc[1], esc[0])
+            self.text[text] = ("@str." + str(self.text_counter), esc[1], esc[0])
             self.text_counter += 1
         return self.text[text]
 
@@ -311,6 +313,22 @@ class Context:
         code = ""
         for text, text_var in self.text.items():
             code += text_var[0] + " = internal constant [" + str(text_var[1]) + " x i8] c\"" + text_var[2] + "\"\n"
+        return code
+
+
+    def getMapFunction(self, type_in, type_out):
+        '''returns the name of the map function which apply a function with prototype "type_out(type_in)"'''
+        key = (str(type_in), str(type_out))
+        if not key in self.map_functions:
+            self.map_functions[key] = ("@map." + str(self.map_functions_counter), type_in, type_out)
+        return self.map_functions[key][0]
+
+    def generateMapFunctions(self):
+        code = ""
+        for name, type_in, type_out in d.values():
+            code += "define { i32, " + str(type_out) + "* } " + name + "(" + str(type_in) + ") {\n"
+            code += "; ... \n"
+            code += "\n"
         return code
 
 
