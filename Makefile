@@ -30,3 +30,5 @@ $(BIN_DIR)/%: $(LL_DIR)/%.ll
 
 mrproper:
 	rm -rf $(BUILD_DIR)
+	find . -type f -name "*.py[co]" -delete
+	find . -type d -name "__pycache__" -delete
