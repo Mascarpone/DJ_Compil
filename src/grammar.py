@@ -312,16 +312,12 @@ def p_primary_expression_id(p):
 
     p[0] = {"type" : t}
     # when its a value, generate load code
-    if t.isValue() or (t.isFunction() and r[0] == "%"):
+    if t.isValue() or (t.isFunction() and r[0] == "%") or t.isArray():
         p[0]["reg"] = newReg() # register for the value
         p[0]["code"] = p[0]["reg"] + " = load " + str(t) + "* " + r + "\n"
         p[0]["addr"] = r # keep address for affectation statement
     elif t.isFunction(): # starts with "@"
         p[0]["reg"] = r
-        p[0]["code"] = ""
-    elif t.isArray():
-        p[0]["reg"] = r
-        p[0]["addr"] = r
         p[0]["code"] = ""
 
 
@@ -410,7 +406,7 @@ def p_primary_expression_map(p):
     else:
         p[0]["type"] = ArrayType(p[3]["type"].getReturnType())
         p[0]["reg"]  = newReg()
-        p[0]["code"] += p[0]["reg"] + " = call " + str(p[3]["type"].getReturnType()) + " " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
+        p[0]["code"] += p[0]["reg"] + " = call " + str(p[0]["type"]) + " " + map_fct + "(" + str(p[3]["type"]) + " " + p[3]["reg"] + ", " + str(p[5]["type"]) + " " + p[5]["reg"] + ")\n"
 
 
 def p_primary_expression_reduce(p):
