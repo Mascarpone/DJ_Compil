@@ -301,16 +301,16 @@ class Context:
     def addText(self, lineno, text):
         '''adds a new constant string'''
         if not text in self.text:
-            esc = escape_string(lineno, text)
-            self.text[text] = ("@str." + str(self.text_counter), esc[1], esc[0])
+            esc_str, l = escape_string(lineno, text)
+            self.text[text] = ("@str." + str(self.text_counter), esc_str, l)
             self.text_counter += 1
         return self.text[text]
 
     def generateText(self):
         '''returns the code defining the constant strings'''
         code = ""
-        for text, text_var in self.text.items():
-            code += text_var[0] + " = internal constant [" + str(text_var[1]) + " x i8] c\"" + text_var[2] + "\"\n"
+        for var_name, esc_str, l in self.text.values():
+            code += var_name + " = internal constant [" + str(l) + " x i8] c\"" + esc_str + "\"\n"
         return code
 
     def getMapFunction(self, type_in, type_out):
@@ -340,7 +340,7 @@ class Context:
 
     def generateReduceFunctions(self):
         code = ""
-        for name, t in reduce_functions.values():
+        for name, t in self.reduce_functions.values():
             te = ArrayType(t)
             fct_t = FunctionType(te, [te, te])
             code += "define " + str(te) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %t) {\n"

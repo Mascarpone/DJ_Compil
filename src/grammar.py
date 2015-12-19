@@ -16,17 +16,17 @@ cc = Context()
 
 # print lib
 # printchar
-cc.setType("printchar", FunctionType(ValueType.VOID, [ValueType.CHAR]))
-cc.setAddr("printchar", "@printchar")
+#cc.setType("printchar", FunctionType(ValueType.VOID, [ValueType.CHAR]))
+#cc.setAddr("printchar", "@printchar")
 # printint
-cc.setType("printint", FunctionType(ValueType.VOID, [ValueType.INT]))
-cc.setAddr("printint", "@printint")
+#cc.setType("printint", FunctionType(ValueType.VOID, [ValueType.INT]))
+#cc.setAddr("printint", "@printint")
 # printfloat
-cc.setType("printfloat", FunctionType(ValueType.VOID, [ValueType.FLOAT]))
-cc.setAddr("printfloat", "@printfloat")
+#cc.setType("printfloat", FunctionType(ValueType.VOID, [ValueType.FLOAT]))
+#cc.setAddr("printfloat", "@printfloat")
 # print
-cc.setType("print", FunctionType(ValueType.VOID, [ArrayType(ValueType.CHAR, True)]))
-cc.setAddr("print", "@print")
+#cc.setType("print", FunctionType(ValueType.VOID, [ArrayType(ValueType.CHAR)]))
+#cc.setAddr("print", "@print")
 
 
 # first rule because it's the starting symbol
@@ -229,7 +229,7 @@ def p_declaration_1(p):
     global cc
     t = p[1]["type"]
     code = ""
-    for d in p[2]: # is a declarator
+    for d in p[2]: # d is a declarator
         if cc.exists(d["name"]):
             warning(p.lineno(2), "You are redefining " + d["name"]);
         reg = newReg()
@@ -339,7 +339,7 @@ def p_primary_expression_sconst(p):
     '''primary_expression : SCONST'''
     global cc
     # escape string ad add it to data segment
-    global_string, l = cc.addText(p.lineno(1), p[1])
+    global_string, _, l = cc.addText(p.lineno(1), p[1])
     t = ArrayType(ValueType.CHAR)
     # create structure for the corresponding char table
     reg = newReg()
@@ -854,7 +854,7 @@ def p_declarator_list_1(p):
 
 def p_declarator_list_2(p):
     '''declarator_list : declarator_list COMMA declarator'''
-    p[0] = p[1] + [p[2]]
+    p[0] = p[1] + [p[3]]
 
 #Statement
 
