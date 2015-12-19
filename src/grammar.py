@@ -392,6 +392,7 @@ def p_primary_expression_size(p):
 def p_primary_expression_map(p):
     '''primary_expression : MAP LPAREN postfix_expression COMMA postfix_expression RPAREN'''
     # T1[] b = map(T1(*)(T2) f, T2[] a)
+    global cc
     if not p[3]["type"].isFunction():
         error(p.lineno(3), "First argument of function 'map()' is expected to be a function. Got a '" + type2str(p[3]["type"]) + "'.")
     if not p[5]["type"].isArray():
@@ -400,7 +401,7 @@ def p_primary_expression_map(p):
         error(p.lineno(5), "The function passed to 'map()' is not taking the expected number of arguments. Got '" + type2str(p[3]["type"].getArgsCount()) + "', expected 1.")
     if not p[3]["type"].getArgType(0).equals(p[5]["type"].getElementsType()):
         error(p.lineno(1), "Incompatible types in 'map()'. You are trying to match '" + type2str(p[3]["type"].getArgType(0)) + "' with '" + type2str(p[5]["type"].getElementsType()) + "'.")
-    map_fct = getMapFunction(p[3]["type"].getArgType(0), p[3]["type"].getReturnType())
+    map_fct = cc.getMapFunction(p[3]["type"].getArgType(0), p[3]["type"].getReturnType())
     p[0] = {"code" : p[3]["code"] + p[5]["code"]}
     if p[3]["type"].getReturnType().equals(ValueType.VOID):
         p[0]["type"] = ValueType.VOID
@@ -415,6 +416,7 @@ def p_primary_expression_map(p):
 
 def p_primary_expression_reduce(p):
     # T b = reduce(T(*)(T,T) f, T[] a)
+    global cc
     '''primary_expression : REDUCE LPAREN postfix_expression COMMA postfix_expression RPAREN'''
     if not p[3]["type"].isFunction():
         error(p.lineno(3), "First argument of function 'reduce()' is expected to be a function. Got a '" + type2str(p[3]["type"]) + "'.")
@@ -428,7 +430,7 @@ def p_primary_expression_reduce(p):
         error(p.lineno(1), "You are trying to use 'void' as a type in reduce() function.")
 
 
-    reduce_fct = getMapFunction(p[3]["type"].getReturnType())
+    reduce_fct = getReduceFunction(p[3]["type"].getReturnType())
     p[0] = {"code" : p[3]["code"] + p[5]["code"]}
     if p[3]["type"].getReturnType().equals(ValueType.VOID):
         p[0]["type"] = ValueType.VOID
