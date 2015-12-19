@@ -9,7 +9,6 @@
  *      Affichage de "12" suivi d'un retour à la ligne.
  */
 
-extern void printint(int i);
 
 int bar(int a, int b)
 {
@@ -20,6 +19,6 @@ int main()
 {
     int x = 2;
     printint(bar(x,10));
-    //print("\n");
+    print("\n");
     return 0;
 }

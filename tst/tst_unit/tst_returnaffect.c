@@ -12,8 +12,6 @@
  *
  */
 
-extern void printint(int i);
-
 int main()
 {
     int x;
@@ -21,10 +19,10 @@ int main()
 
     while ((x = x - 1)) {
         printint(x);
-        //print("... ");
+        print("... ");
     }
 
-    //print("youpi !\n");
+    print("youpi !\n");
 
     return 0;
 }

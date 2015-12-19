@@ -9,13 +9,12 @@
  *      Pas d'exécutable.
  */
 
-extern void printint(int i);
 
 int main()
 {
     if(1) {
         int i = 7;
-        //print("Il est passé par ici\n");
+        print("Il est passe par ici\n");
     }
     printint(i);
     return 0;

@@ -10,7 +10,6 @@
  *      Pas d'erreur.
  */
 
-extern void printint(int i);
 
 int main()
 {
@@ -18,7 +17,7 @@ int main()
     i = 0;
     while(i < 10) {
         printint(i);
-        // print("\n");
+        print("\n");
         i++;
     }
     return 0;

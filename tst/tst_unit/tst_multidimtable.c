@@ -14,21 +14,23 @@
 
 int main()
 {
-    int[] A[3];
-    for(int i = 0; i < 3; i++)
+    int[][3] A;
+    int i;
+    int j;
+    for(i = 0; i < 3; i++)
     {
-        int B[3];
+        int[3] B;
         A[i] = B;
-        for(int j = 0; j < 3; j++) {
+        for(j = 0; j < 3; j++) {
             A[i][j] = i+j;
         }
     }
 
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            printint(A[i][j]);
-        }
-        printchar('\n');
+    for(i = 0; i < 3; i++) {
+      for(j = 0; j < 3; j++) {
+          printint(A[i][j]);
+      }
+      printchar('\n');
     }
     printchar('\n');
     return 0;
