@@ -246,6 +246,15 @@ def p_declaration_1(p):
                 reg_res = newReg()
                 code += reg_res + " = load " + str(d["type"]) + "* " + d["reg"] + "\n"
                 code += "store " + str(d["type"]) + " " + reg_res + ", " + str(t) + "* " + reg + "\n"
+                # copy size entry
+                #reg_size_res_ptr = newReg()
+                #code += reg_size_ptr + " = getelementptr " + str(d["type"]) + "* " + d["reg"] + ", i32 0, i32 0\n"
+                #reg_size_res = newReg()
+                #code += "load i32* " + reg_size_res_ptr + "\n"
+                #reg_size_ptr = newReg()
+                #code += reg_size_ptr + " = getelementptr " + str(t) + "* " + reg + ", i32 0, i32 0\n"
+                #code += "store i32 " + reg_size + ", i32* " + reg_size_ptr + "\n"
+                # copy buffer entry
         else:
             if t.isValue():
                 code += "store " + str(t) + " 0, " + str(t) + "* " + reg + "\n"

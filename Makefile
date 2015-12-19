@@ -1,8 +1,7 @@
-CC=gcc
-LLC=llc
+LLC=clang
 CFLAGS=-Wall
 
-LIBS=./src/lib/print.c # $(wildcard ./src/lib/*)
+LIBS=$(wildcard ./src/lib/*)
 PARSER=./src/DJ_compil.py
 BUILD_DIR=./build
 C_DIR=./tst
@@ -26,13 +25,9 @@ $(LL_DIR)/%.ll: $(C_DIR)/%.c $(PARSER)
 	mkdir -p $(dir $@)
 	python $(PARSER) $< $@
 
-$(S_DIR)/%.s: $(LL_DIR)/%.ll $(PARSER)
+$(BIN_DIR)/%: $(S_DIR)/%.ll
 	mkdir -p $(dir $@)
-	llc -o $@ $<
-
-$(BIN_DIR)/%: $(S_DIR)/%.s
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+	$(LLC) $(CFLAGS) -o $@ $< $(LIBS)
 
 mrproper:
 	rm -rf $(BUILD_DIR)

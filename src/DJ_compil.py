@@ -51,7 +51,7 @@ else:
         f.write("declare void @printchar(i8)\n")
         f.write("declare void @printint(i32)\n")
         f.write("declare void @printfloat(float)\n")
-        f.write("declare void @print({i32,i8*}*)\n")
+        f.write("declare void @print({i32,i8*})\n")
         seg = cc.generateText()
         if seg != "":
             f.write("\n; Global strings\n")
