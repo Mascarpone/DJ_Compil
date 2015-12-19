@@ -478,9 +478,9 @@ def p_primary_expression_id_minusminus(p):
     if not cc.exists(p[1]):
         error(p.lineno(1), "The expression '" + p[1] + "' is not defined")
     t = cc.getType(p[1])
-    if t[1] == "i32" or t[1] == "i8":
+    if t.equals(ValueType.INT) or t.equals(ValueType.CHAR):
         op = "sub"
-    elif t[1] == "float":
+    elif t.equals(ValueType.FLOAT):
         op = "fsub"
 
     r = cc.getAddr(p[1])
@@ -488,9 +488,9 @@ def p_primary_expression_id_minusminus(p):
     r2 = newReg()
     p[0] = {"type" : t,
             "reg" : r,
-            "code" :   r1 + " = load " + t[1] + "* " + r + "\n"
-                     + r2 + " = " + op + " " + t[1] + " " + r1 + ", 1 \n"
-                     + "store " + t[1] + " " + r2 + ", " + t[1] + "* " + r}
+            "code" :   r1 + " = load " + str(t) + "* " + r + "\n"
+                     + r2 + " = " + op + " " + str(t) + " " + r1 + ", 1 \n"
+                     + "store " + str(t) + " " + r2 + ", " + str(t) + "* " + r + "\n"}
     pass
 
 def p_postfix_expression_1(p):
@@ -796,7 +796,7 @@ def p_expression_2(p):
         code = p[1]["code"] + p[3]["code"]
         if not p[3]["type"].equals(p[1]["type"]):
             r3 = newReg()
-            code += convert(op2["reg"], op2["type"], t, r3, p.lineno(0)) #checks types
+            code += convert(p[3]["reg"], p[3]["type"], p[1]["type"], r3, p.lineno(0)) #checks types
         code += "store " + str(p[1]["type"]) + " " + r3 + ", " + str(p[1]["type"]) + "* " + p[1]["addr"] + "\n"
         p[0] = {"code" : code,
                 "reg" : r3,

@@ -11,12 +11,10 @@
 
 int main() {
 
-    int a, c;
-    float b, d;
-    b = 1.3;
+    int a = 1;
+    float b = 1.3;
 
-    a = b; // OK : floor
-    d = c; // OK
+    b = a; // OK
 
     return 0;
 }
