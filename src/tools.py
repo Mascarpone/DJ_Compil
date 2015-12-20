@@ -24,14 +24,14 @@ def error(lineno, msg):
     #global produce_code
     #produce_code = False
     sys.stderr.write(bcolors.FAIL + "*ERROR*" + bcolors.ENDC + " (l." + str(lineno) + "): " + msg + "\n")
-    raise SyntaxError
+    exit(1)
 
 
 def internal_error(lineno, msg):
     #global produce_code
     #produce_code = False
     sys.stderr.write(bcolors.FAIL + "*INTERNAL ERROR*" + bcolors.ENDC + " (l." + str(lineno) + "): " + msg + "\n")
-    raise SystemError
+    exit(2)
 
 
 
