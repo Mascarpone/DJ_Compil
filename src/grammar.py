@@ -949,11 +949,12 @@ def p_selection_statement_2(p):
 
 def p_selection_statement_3(p):
     '''selection_statement : for_keyword LPAREN expression_statement expression_statement expression RPAREN statement'''
+    global cc
     loop_init = newLab()
     loop_head = newLab()
     loop_body = newLab()
-    loop_close = newLab()
-    loop_exit = newLab()
+    loop_exit, loop_close = p[1]["labels"]
+    cc.exitLoop()
     r = newReg()
     p[0] = {"code" : "br label %" + loop_init + "\n"
                      + "\n" + loop_init + ": \n"
@@ -977,13 +978,14 @@ def p_for_keyword(p):
     global cc
     cc.new()
     cc.unactivateOpenNewContext()
-    p[0] = {}
+    p[0] = {"labels" : cc.enterLoop()}
 
 def p_iteration_statement_1(p):
-    '''iteration_statement : WHILE LPAREN expression RPAREN statement'''
-    loop_head = newLab()
+    '''iteration_statement : while_keyword LPAREN expression RPAREN statement'''
+    global cc
     loop_body = newLab()
-    loop_exit = newLab()
+    loop_exit, loop_head = p[1]["labels"]
+    cc.exitLoop()
     r = newReg()
     p[0] = {"code" : "br label %" + loop_head + "\n"
                      + "\n" + loop_head + ": \n"
@@ -996,11 +998,16 @@ def p_iteration_statement_1(p):
                      + "\n" + loop_exit + ": \n"
            }
 
+def p_while_keyword(p):
+    '''while_keyword : WHILE'''
+    global cc
+    p[0] = {"labels" : cc.enterLoop()}
+
 def p_iteration_statement_2(p):
-    '''iteration_statement : DO statement WHILE LPAREN expression RPAREN SEMI'''
+    '''iteration_statement : do_keyword statement WHILE LPAREN expression RPAREN SEMI'''
     loop_body = newLab()
-    loop_tail = newLab()
-    loop_exit = newLab()
+    loop_exit, loop_tail = p[1]["labels"]
+    cc.exitLoop()
     r = newReg()
     p[0] = {"code" : "br label %" + loop_body + "\n"
                      + "\n" + loop_body + ": \n"
@@ -1012,6 +1019,11 @@ def p_iteration_statement_2(p):
                      + "br i1 " + r + ", label %" + loop_body + ", label %" + loop_exit + "\n"
                      + "\n" + loop_exit + ": \n"
            }
+
+def p_do_keyword(p):
+    '''do_keyword : DO'''
+    global cc
+    p[0] = {"labels" : cc.enterLoop()}
 
 
 def p_jump_statement_1(p):
@@ -1026,6 +1038,30 @@ def p_jump_statement_2(p):
     global cc
     cc.addReturnType((p.lineno(0), p[2]["type"]))
     p[0] = {"code" : p[2]["code"] + "ret " + str(p[2]["type"]) + " " + p[2]["reg"]}
+
+
+def p_jump_statement_3(p):
+    '''jump_statement : BREAK SEMI'''
+    global cc
+    label_loop_end = cc.getLastBreakLabel()
+    if label_loop_end is None:
+        error(p.lineno(1), "Using 'break' not in a loop.")
+    else:
+        code = "br label %" + label_loop_end + "\n"
+    p[0] = {"code" : code}
+
+
+def p_jump_statement_4(p):
+    '''jump_statement : CONTINUE SEMI'''
+    global cc
+    label_loop_incr = cc.getLastContinueLabel()
+    if label_loop_incr is None:
+        error(p.lineno(1), "Using 'continue' not in a loop.")
+    else:
+        code = "br label %" + label_loop_incr + "\n"
+    p[0] = {"code" : code}
+
+
 
 
 # If no rules have been found

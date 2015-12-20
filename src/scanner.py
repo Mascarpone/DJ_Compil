@@ -15,29 +15,26 @@ reserved = (
     'MAP', 'REDUCE', 'SIZE',
     'IF', 'ELSE',
     'FOR', 'WHILE', 'DO',
-    #'BREAK', 'CONTINUE',
+    'BREAK', 'CONTINUE',
     'RETURN',
-    #'SWITCH', 'CASE', 'DEFAULT',
     )
 
 tokens = reserved + (
     # Literals (identifier, integer constant, float constant, string constant, char const)
     'ID', 'ICONST', 'FCONST', 'SCONST', 'CCONST',
 
-    # Operators (+,-,*,/,%,|,&,~,^,<<,>>, ||, &&, !, <, <=, >, >=, ==, !=)
+    # Operators (+,-,*,/,%, ||, &&, !, <, <=, >, >=, ==, !=)
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
-    #'OR', 'AND', 'NOT', 'XOR', 'LSHIFT', 'RSHIFT',
     'LOR', 'LAND', 'LNOT',
     'LT', 'LE', 'GT', 'GE', 'EQ', 'NE',
 
-    # Assignment (=, *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=)
+    # Assignment (=, *=, /=, %=, +=, -=)
     'EQUALS', 'TIMESEQUAL', 'DIVEQUAL', 'MODEQUAL', 'PLUSEQUAL', 'MINUSEQUAL',
-    #'LSHIFTEQUAL','RSHIFTEQUAL', 'ANDEQUAL', 'XOREQUAL', 'OREQUAL',
 
     # Increment/decrement (++,--)
     'PLUSPLUS', 'MINUSMINUS',
 
-    # Delimeters ( ) [ ] { } , . ; :
+    # Delimeters ( ) [ ] { } , ;
     'LPAREN', 'RPAREN',
     'LBRACKET', 'RBRACKET',
     'LBRACE', 'RBRACE',
@@ -58,12 +55,6 @@ t_MINUS            = r'-'
 t_TIMES            = r'\*'
 t_DIVIDE           = r'/'
 t_MOD              = r'%'
-#t_OR               = r'\|'
-#t_AND              = r'&'
-#t_NOT              = r'~'
-#t_XOR              = r'\^'
-#t_LSHIFT           = r'<<'
-#t_RSHIFT           = r'>>'
 t_LOR              = r'\|\|'
 t_LAND             = r'&&'
 t_LNOT             = r'!'
@@ -75,18 +66,12 @@ t_EQ               = r'=='
 t_NE               = r'!='
 
 # Assignment operators
-
 t_EQUALS           = r'='
 t_TIMESEQUAL       = r'\*='
 t_DIVEQUAL         = r'/='
 t_MODEQUAL         = r'%='
 t_PLUSEQUAL        = r'\+='
 t_MINUSEQUAL       = r'-='
-#t_LSHIFTEQUAL      = r'<<='
-#t_RSHIFTEQUAL      = r'>>='
-#t_ANDEQUAL         = r'&='
-#t_OREQUAL          = r'\|='
-#t_XOREQUAL         = r'\^='
 
 # Increment/decrement
 t_PLUSPLUS         = r'\+\+'
@@ -100,7 +85,6 @@ t_RBRACKET         = r'\]'
 t_LBRACE           = r'\{'
 t_RBRACE           = r'\}'
 t_COMMA            = r','
-#t_PERIOD           = r'\.'
 t_SEMI             = r';'
 
 # Identifiers and reserved words
@@ -108,7 +92,6 @@ t_SEMI             = r';'
 reserved_map = { }
 for r in reserved:
     reserved_map[r.lower()] = r
-
 
 def t_ID(t):
     r'[A-Za-z_][A-Za-z0-9_]*'

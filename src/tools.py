@@ -183,6 +183,12 @@ def type2str(t):
         else:
             return type2str(t.getReturnType()) + "()"
 
+# Label generation
+LAB_NB = 0
+def newLab():
+    global LAB_NB
+    LAB_NB += 1
+    return "label" + str(LAB_NB)
 
 
 # ids and their corresponding types
@@ -203,6 +209,8 @@ class Context:
         self.map_functions_counter = 0              # counter for map functions
         self.reduce_functions = {}                  # used to generate reduce functions for each type of parameters
         self.reduce_functions_counter = 0           # counter for reduce functions
+        self.break_labels = []                      # list of exit labels for loops
+        self.continue_labels = []                   # list of next loop labels for loops
 
 
     def getParent(self):
@@ -310,6 +318,39 @@ class Context:
         for var_name, esc_str, l in self.text.values():
             code += var_name + " = internal constant [" + str(l) + " x i8] c\"" + esc_str + "\"\n"
         return code
+
+    def getLastBreakLabel(self):
+        '''Returns the label to the end of the last loop we entered or None if there is no loop'''
+        if len(self.break_labels) > 0:
+            return self.break_labels[-1]
+        else:
+            return None
+
+    def getLastContinueLabel(self):
+        '''Returns the label to the next iteration of the last loop we entered or None if there is no loop'''
+        if len(self.continue_labels) > 0:
+            return self.continue_labels[-1]
+        else:
+            return None
+
+    def enterLoop(self):
+        '''Creates two labels for the loop we are entering. One for break and one for continue'''
+        b = newLab()
+        c = newLab()
+        self.break_labels.append(b)
+        self.continue_labels.append(c)
+        return b, c
+
+    def exitLoop(self):
+        '''Removes the labels of the last loop we entered when we exit it'''
+        if len(self.break_labels) > 0:
+            self.break_labels.pop()
+        else:
+            internal_error(0, "Trying to close a non-existing loop. (break)")
+        if len(self.continue_labels) > 0:
+            self.continue_labels.pop()
+        else:
+            internal_error(0, "Trying to close a non-existing loop. (continue)")
 
     def getMapFunction(self, type_in, type_out):
         '''returns the name of the map function which apply a function with prototype "type_out(type_in)"'''
@@ -431,12 +472,6 @@ class Context:
         return code
 
 
-# Label generation
-LAB_NB = 0
-def newLab():
-    global LAB_NB
-    LAB_NB += 1
-    return "label" + str(LAB_NB)
 
 
 # Registre generation

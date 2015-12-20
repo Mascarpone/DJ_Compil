@@ -1,24 +1,30 @@
 /*
  * Ce test décrit la fonctionnalité suivante du compilateur :
- *      boucle for avec break et continue
+ *      incrément et do-while
  *
  * Le résultat attendu de la compilation est :
- *      Pas d'erreur.
+ *      Pas d'erreur
  *
  * Le résultat attendu de l'exécution est :
- *      Affichage des entiers de 0 à 7, sauf 3, un par ligne, suivi d'un retour à la ligne.
+ *      Affichage des entiers de 0 à 7, sauf 3, un par ligne.
+ *      Pas d'erreur.
  */
+
 
 int main()
 {
     int i;
-    for(i = 0; i < 12; i++) {
-        if(i == 3)
+    i = 0;
+    do {
+        if( i == 3 ) {
+            i++;
             continue;
+        }
         printint(i);
         print("\n");
         if(i == 7)
             break;
-    }
+        i++;
+    } while(i < 10);
     return 0;
 }

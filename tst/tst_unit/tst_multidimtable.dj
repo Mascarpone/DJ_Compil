@@ -33,6 +33,5 @@ int main()
       }
       printchar('\n');
     }
-    printchar('\n');
     return 0;
  }
