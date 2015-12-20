@@ -4,6 +4,7 @@ import sys, os, subprocess, random
 from subprocess import Popen, PIPE
 
 dj_source_ext = "dj"
+lib_files = ["src/lib/print.ll", "src/lib/print.c"]
 
 def usage():
     sys.stderr.write("Usage: " + sys.argv[0] + " [ -o output ] input1.[ll|c] input2.[ll|c]\n\n")
@@ -54,7 +55,7 @@ if __name__ == '__main__':
         if sys.argv[1] == "-o" and len(sys.argv) > 3:
             output_file = sys.argv[2]
             index_input_file = 3
-        input_files = sys.argv[index_input_file:]
+        input_files = sys.argv[index_input_file:] + lib_files
         # compile DJ source files
         tmp_ll_out = []
         for i in range(len(input_files)):
@@ -110,7 +111,7 @@ if __name__ == '__main__':
                 print "Compilation OK. Try to run " + output_file
         elif cc == 2: # clang
             print "Found clang"
-            cmd = "clang -o " + output_file + " ".join(tmp_ll_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext]])
+            cmd = "clang -o " + output_file + " " + " ".join(tmp_ll_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext]])
             print cmd
             exit_code, out, err = runCommand(cmd)
             if exit_code == 0:

@@ -25,9 +25,14 @@ if len(sys.argv) < 3:
     sys.exit(1)
 
 # read source file
-f = open(sys.argv[1])
-prog = f.read()
-f.close()
+try:
+    f = open(sys.argv[1])
+    prog = f.read()
+    f.close()
+except IOError as e:
+    sys.stderr.write("No such file: " + sys.argv[1])
+    exit(1)
+
 
 # parse it
 result = yacc.parse(prog)
