@@ -7,9 +7,9 @@
  *
  * Le résultat attendu de l'exécution est :
  *      Affiche :
- *      012
- *      123
- *      234
+ *      0 1 2
+ *      1 2 3
+ *      2 3 4
  */
 
 int main()
@@ -29,6 +29,7 @@ int main()
     for(i = 0; i < 3; i++) {
       for(j = 0; j < 3; j++) {
           printint(A[i][j]);
+          printchar(' ');
       }
       printchar('\n');
     }

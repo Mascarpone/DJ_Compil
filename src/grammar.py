@@ -80,6 +80,8 @@ def p_function_definition(p):
     cc.setAddr(p[2]["name"], "@"+p[2]["name"])
 
     # check return type
+    if cc.getReturnTypes() == []:
+        error(p.lineno(2), "No return statement was found in '" + p[2]["name"] + "'.")
     for l, t in cc.getReturnTypes():
         if not t.equals(p[1]["type"]):
             error(l, "Incompatible return type. Expected '" + type2str(p[1]["type"]) + "' but got '" + type2str(t) + "'.")
@@ -224,6 +226,20 @@ def p_compound_statement_2(p):
     p[0] = {"code" : p[2]["code"]}
 
 
+def convert(reg, tbefore, tafter, newreg, lineno):
+    '''Returns the code to convert in llvm the value in reg from type tbefore to tafter and store it in newreg'''
+    if tbefore.equals(ValueType.CHAR) and tafter.equals(ValueType.INT):
+        op = "sext"
+    elif (tbefore.equals(ValueType.INT) or tbefore.equals(ValueType.CHAR)) and tafter.equals(ValueType.FLOAT):
+        op = "sitofp"
+    elif tbefore.equals(ValueType.INT) and tafter.equals(ValueType.CHAR):
+        op = "trunc"
+    else :
+        error(lineno, "Invalid implicit conversion from '" + type2str(tbefore) + "' to '" + type2str(tafter) + "'.")
+
+    return newreg + " = " + op + " " + str(tbefore) + " " + reg + " to " + str(tafter) + "\n"
+
+
 def p_declaration_1(p):
     '''declaration_statement : type_name declarator_list SEMI'''
     global cc
@@ -237,10 +253,12 @@ def p_declaration_1(p):
         cc.setAddr(d["name"], reg)
         code += reg + " = alloca " + str(t) + "\n"
         if d["code"] is not None:
-            if not d["type"].equals(t):
-                error(p.lineno(1), "Incompatible types in declaration. Expected '" + type2str(t) + "' but got '" + type2str(d["type"]) + "'.")
             code += d["code"]
-            code += "store " + str(d["type"]) + " " + d["reg"] + ", " + str(t) + "* " + reg + "\n"
+            if not d["type"].equals(t):
+                tmp_reg = d["reg"]
+                d["reg"] = newReg()
+                code += convert(tmp_reg, d["type"], t, d["reg"], p.lineno(1))
+            code += "store " + str(t) + " " + d["reg"] + ", " + str(t) + "* " + reg + "\n"
         else:
             if t.isValue():
                 code += "store " + str(t) + " 0, " + str(t) + "* " + reg + "\n"
@@ -286,6 +304,7 @@ def p_primary_expression_id(p):
     global cc
 
     # get variable type and check if it has been defined
+    print cc.id_type
     t = cc.getType(p[1])
     if t is None:
         error(p.lineno(1), "The variable '" + p[1] + "' is not defined")
@@ -572,19 +591,6 @@ def p_argument_expression_list_2(p):
 
 # Operations
 
-def convert(reg, tbefore, tafter, newreg, lineno):
-    '''Returns the code to convert in llvm the value in reg from type tbefore to tafter and store it in newreg'''
-    if tbefore.equals(ValueType.CHAR) and tafter.equals(ValueType.INT):
-        op = "sext"
-    elif (tbefore.equals(ValueType.INT) or tbefore.equals(ValueType.CHAR)) and tafter.equals(ValueType.FLOAT):
-        op = "sitofp"
-    elif tbefore.equals(ValueType.INT) and tafter.equals(ValueType.CHAR):
-        op = "trunc"
-    else :
-        error(lineno, "Invalid implicit conversion.")
-
-    return newreg + " = " + op + " " + str(tbefore) + " " + reg + " to " + str(tafter) + "\n"
-
 operation_intchar = {"*" : "mul", "/" : "sdiv", "%" : "srem", "+" : "add", "-" : "sub", "<" : "icmp slt", ">" : "icmp sgt", "<=" : "icmp sle", ">=" : "icmp sge", "==" : "icmp eq", "!=" : "icmp ne"}
 operation_float = {"*" : "fmul", "/" : "fdiv", "%" : "frem", "+" : "fadd", "-" : "fsub", "<" : "fcmp olt", ">" : "fcmp ogt", "<=" : "fcmp ole", ">=" : "fcmp oge", "==" : "fcmp oeq", "!=" : "fcmp one"}
 def operation(operation, op1, op2, lineno):
@@ -759,33 +765,49 @@ def p_multiplicative_expression_5(p):
 def expressionOperation(operation, op1, op2, lineno):
     '''Generates the code and the registers necessary to implement the affectation operation between op1 and op2'''
     t = op1["type"].getOpResultType(op2["type"])
+
+    if not "addr" in op1 or op1["addr"] is None:
+        error(lineno, "Can't store a value in that.")
+
     if t is None or not t.isValue() or not op1["type"].equals(t):
         error(lineno, "Incompatible types in operation " + operation + ". Got " + type2str(op1["type"]) + " and " + type2str(op2["type"]))
 
     if t.equals(ValueType.INT) or t.equals(ValueType.CHAR):
         operation_llvm = operation_intchar[operation]
-    if t.equals(ValueType.FLOAT):
+    elif t.equals(ValueType.FLOAT):
         operation_llvm = operation_float[operation]
 
+    # compute both operands
     code = op1["code"] + op2["code"]
 
-    op1load = newReg()
-    code += op1load + " = load " + str(op1["type"]) + "* " + op1["addr"] + "\n"
-
+    # convert operands in result type if needed
+    r1 = op1["reg"]
     r2 = op2["reg"]
+    if not op1["type"].equals(t):
+        r1 = newReg()
+        code += convert(op1["reg"], op1["type"], t, r1, lineno)
     if not op2["type"].equals(t):
         r2 = newReg()
         code += convert(op2["reg"], op2["type"], t, r2, lineno)
 
-    result = newReg()
-    code += result + " = " + operation_llvm + " " + str(t) + " " + op1load + ", " + r2 + "\n"
+    # compute result
+    tmp_result = newReg()
+    code += tmp_result + " = " + operation_llvm + " " + str(t) + " " + r1 + ", " + r2 + "\n"
+
+    # convert result to op1 type if needed
+    if not op1["type"].equals(t):
+        result = newReg()
+        code += convert(tmp_result, t, op1["type"], result, lineno)
+    else:
+        result = tmp_result
+
+    # store result in op1 addr
     code += "store " + str(op1["type"]) + " " + result + ", " + str(op1["type"]) + "* " + op1["addr"] + "\n"
 
-    return {"type" : t,
+    return {"type" : op1["type"],
             "reg"  : result,
             "addr" : op1["addr"],
-            "code" : code
-            }
+            "code" : code}
 
 def p_expression_1(p):
     '''expression : comparison_expression'''
@@ -794,26 +816,33 @@ def p_expression_1(p):
 
 def p_expression_2(p):
     '''expression : unary_expression EQUALS comparison_expression'''
-    if p[1]["type"].isArray() and p[3]["type"].isArray():
-        if not p[1]["type"].getElementsType().equals(p[3]["type"].getElementsType()):
-            error(p.lineno(0), "Affecting arrays of different types.")
-        code = p[1]["code"] + p[3]["code"]
-        comp_val = newReg()
-        code += comp_val + " = load " + str(p[3]["type"]) + "* " + p[3]["reg"] + "\n"
-        code += "store " + str(p[3]["type"]) + " " + comp_val + ", " + str(p[3]["type"]) + "* " + p[1]["reg"] + "\n"
-        p[0] = {"code" : code, "reg" : p[3]["reg"], "type" : p[3]["type"]}
-    else:
-        r3 = p[3]["reg"]
-        code = p[1]["code"] + p[3]["code"]
-        if not p[3]["type"].equals(p[1]["type"]):
-            r3 = newReg()
-            code += convert(p[3]["reg"], p[3]["type"], p[1]["type"], r3, p.lineno(0)) #checks types
-        code += "store " + str(p[1]["type"]) + " " + r3 + ", " + str(p[1]["type"]) + "* " + p[1]["addr"] + "\n"
-        p[0] = {"code" : code,
-                "reg" : r3,
-                "addr" : p[1]["addr"],
-                "type" : p[1]["type"]}
-    pass
+    #if p[1]["type"].isArray() and p[3]["type"].isArray():
+    #    if not p[1]["type"].getElementsType().equals(p[3]["type"].getElementsType()):
+    #        error(p.lineno(0), "Affecting arrays of different types.")
+    #    code = p[1]["code"] + p[3]["code"]
+    #    comp_val = newReg()
+    #    code += comp_val + " = load " + str(p[3]["type"]) + "* " + p[3]["reg"] + "\n"
+    #    code += "store " + str(p[3]["type"]) + " " + comp_val + ", " + str(p[3]["type"]) + "* " + p[1]["reg"] + "\n"
+    #    p[0] = {"code" : code, "reg" : p[3]["reg"], "type" : p[3]["type"]}
+    #else:
+    if not "addr" in p[1] or p[1]["addr"] is None:
+        error("Can't store a value in that.")
+
+    if p[1]["type"].isFunction() and not p[1]["type"].equals(p[3]["type"]):
+        error(p.lineno(1), "Affecting function of type '" + type2str(p[3]["type"]) + "' in '" + type2str(p[1]["type"]) + "'.")
+    elif p[1]["type"].isArray() and not p[1]["type"].equals(p[3]["type"]):
+        error(p.lineno(1), "Affecting array of type '" + type2str(p[3]["type"]) + "' in '" + type2str(p[1]["type"]) + "'.")
+
+    r3 = p[3]["reg"]
+    code = p[1]["code"] + p[3]["code"]
+    if not p[3]["type"].equals(p[1]["type"]):
+        r3 = newReg()
+        code += convert(p[3]["reg"], p[3]["type"], p[1]["type"], r3, p.lineno(0)) #checks types
+    code += "store " + str(p[1]["type"]) + " " + r3 + ", " + str(p[1]["type"]) + "* " + p[1]["addr"] + "\n"
+    p[0] = {"code" : code,
+            "reg" : r3,
+            "addr" : p[1]["addr"],
+            "type" : p[1]["type"]}
 
 def p_expression_3(p):
     '''expression : unary_expression TIMESEQUAL comparison_expression'''
@@ -995,9 +1024,9 @@ def p_jump_statement_2(p):
 # If no rules have been found
 def p_error(p):
     if p:
-        print("Syntax error at line " + str(p.lineno) + " : '" + p.value + "'")
+        error(p.lineno, "Syntax error: '" + p.value + "'")
     else:
-        print("Syntax error at EOF")
+        error(0, "Syntax error at EOF")
 
 
 

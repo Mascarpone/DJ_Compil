@@ -22,7 +22,8 @@ int foo(int a, int b)
 int main()
 {
     int i;
-    int T[5] = {2, 3, 5, 11, 21};
+    int[5] T;
+    T[0] = 2; T[1] = 3; T[2] = 5; T[3] = 11; T[4] = 21;
     i = reduce(foo, T);
 
     printint(i);

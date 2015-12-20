@@ -1,13 +1,13 @@
 /*
  * Ce test décrit la fonctionnalité suivante du compilateur :
- *      Lorsqu'on passe un tableau vide comme paramètre à la fonction
- *      reduce, cela soulève une erreur à l'éxecution
+ *      La fonction reduce doit prendre un tableau non vide en paramètre
  *
  * Le résultat attendu de la compilation est :
  *
  *
  * Le résultat attendu de l'exécution est :
- *      Error on line 23 : Tableau vide
+ *      La valeur retournée par reduce() n'est pas spécifiée.
+ *      Il n'y a cependant pas de segfault.
  *
  */
 
@@ -18,9 +18,8 @@ int foo(int a, int b)
 
 int main()
 {
-    int i;
-    int T[];
-    i = reduce(foo, T);
-
+    int[] T;
+    int i = reduce(foo, T);
+    printint(i);
     return 0;
 }

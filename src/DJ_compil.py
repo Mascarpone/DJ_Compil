@@ -30,7 +30,7 @@ try:
     prog = f.read()
     f.close()
 except IOError as e:
-    sys.stderr.write("No such file: " + sys.argv[1])
+    sys.stderr.write("No such file: " + sys.argv[1] + "\n")
     exit(1)
 
 
@@ -44,12 +44,6 @@ checkGenericErrors(cc, result)
 if result is None:
     sys.stderr.write(bcolors.FAIL + "Code production canceled\n" + bcolors.ENDC)
 else:
-    print("\n        ===== CODE =====\n")
-    print(cc.generateText())
-    print(cc.generateMapFunctions())
-    print(cc.generateReduceFunctions())
-
-    print(result["code"])
     with open(sys.argv[2], "w") as f:
         f.write("declare i8* @malloc(i64)\n")
         f.write("declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)\n")

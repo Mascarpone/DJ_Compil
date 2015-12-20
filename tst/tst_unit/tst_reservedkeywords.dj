@@ -27,11 +27,11 @@ void map()
 
 int main()
 {
-    int main; // OK (thanks to the scope)
+    int main; // OK - warning (thanks to the scope)
     int for; // Error
     int if; // Error
     int else; // Error
     int int; // Error
 
-    return 0; 
+    return 0;
 }

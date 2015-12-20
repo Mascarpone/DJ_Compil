@@ -7,7 +7,10 @@ dj_source_ext = "dj"
 lib_files = ["src/lib/print.ll", "src/lib/print.c"]
 
 def usage():
-    sys.stderr.write("Usage: " + sys.argv[0] + " [ -o output ] input1.[ll|c] input2.[ll|c]\n\n")
+    sys.stderr.write("Compiler for DJ coding language. v1.0\n")
+    sys.stderr.write("Copyright (c) 2015 Mascarpone, Pyvain - MIT Licence\n")
+    sys.stderr.write("\n")
+    sys.stderr.write("Usage: " + sys.argv[0] + " [ -o output ] input1.[dj|ll|c] input2.[dj|ll|c]\n")
     sys.stderr.write("    -o output      Specify an output file. Default is a.out\n")
     sys.stderr.write("\n")
 
@@ -49,7 +52,12 @@ def generateTmpFileName(ext = "tmp"):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         usage()
+        exit(1)
     else:
+        code, out, err = runCommand("which gcc")
+        if code != 0:
+            sys.stderr(sys.argv[0] + ": Couldn't find GCC. Install it first.\n")
+            exit(1)
         output_file = "a.out"
         index_input_file = 1
         if sys.argv[1] == "-o" and len(sys.argv) > 3:
@@ -67,16 +75,17 @@ if __name__ == '__main__':
                     sys.stderr.write(input_files[i] + " -> " + tmp_ll_out[-1] + " : FAILED\n")
                     print out
                     #sys.stderr.write(err+"\n")
-                    exit(1)
+                    exit(2)
                 else:
+                    print out
                     print input_files[i] + " -> " + tmp_ll_out[-1] + " : OK"
             elif not getFileExt(input_files[i]) in [dj_source_ext, "c", "ll"]:
-                sys.stderr.write("DJ_compile: ." + getFileExt(input_files[i]) + " files are not supported\n")
+                sys.stderr.write(sys.argv[0] + ": ." + getFileExt(input_files[i]) + " files are not supported\n")
                 exit(1)
         print "Looking for LLVM compiler..."
         cc = chooseLlvmCompiler()
         if cc == 0:
-            sys.stderr.write("Neither llc nor clang was found on your system. Install them first.")
+            sys.stderr.write(sys.argv[0] + ": Neither llc nor clang was found on your system. Install one of them first.")
             exit(1)
         elif cc == 1: # llc
             print "Found llc"
@@ -88,6 +97,7 @@ if __name__ == '__main__':
                     sys.stderr.write(tmp_ll_out[i] + " -> " + tmp_s_out[-1] + " : FAILED\n")
                     print out
                     #sys.stderr.write(err+"\n")
+                    exit(3)
                 else:
                     os.remove(tmp_ll_out[i])
                     print tmp_ll_out[i] + " -> " + tmp_s_out[-1] + " : OK"
@@ -99,13 +109,15 @@ if __name__ == '__main__':
                         sys.stderr.write(input_files[i] + " -> " + tmp_s_out[-1] + " : FAILED\n")
                         print out
                         #sys.stderr.write(err+"\n")
+                        exit(3)
                     else:
                         print input_files[i] + " -> " + tmp_s_out[-1] + " : OK"
             code, out, err = runCommand("gcc -o " + output_file + " " + " ".join(tmp_s_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext,"ll"]]))
             if code != 0:
-                sys.stderr.write("Something went wrong...\n")
+                sys.stderr.write(sys.argv[0] + ": Something went wrong...\n")
                 print out
                 #sys.stderr.write(err+"\n")
+                exit(4)
             else:
                 map(os.remove, tmp_s_out)
                 print "Compilation OK. Try to run " + output_file
@@ -116,6 +128,7 @@ if __name__ == '__main__':
                 map(os.remove, tmp_ll_out)
                 print "Compilation OK. Try to run " + output_file
             else:
-                sys.stderr.write("Something went wrong...\n")
+                sys.stderr.write(sys.argv[0] + ": Something went wrong...\n")
                 print out
                 #sys.stderr.write(err)
+                exit(4)

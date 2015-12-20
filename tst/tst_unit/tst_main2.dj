@@ -3,7 +3,7 @@
  *      détection de l'absence de main()
  *
  * Le résultat attendu de la compilation est :
- *      Erreur: fonction int main() manquante
+ *      Erreur: référence indéfinie vers "main"
  *
  * Le résultat attendu de l'exécution est :
  *      Pas d'exécutable.
@@ -12,5 +12,5 @@
 int foo()
 {
     // des calculs extraordinaires ont parfois lieu ici
-    return 0; 
+    return 0;
 }

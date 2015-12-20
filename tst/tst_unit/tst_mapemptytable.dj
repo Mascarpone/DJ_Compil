@@ -8,20 +8,19 @@
  *
  *
  * Le résultat attendu de l'exécution est :
- *      Erreur ligne 28 : dépassement mémoire. Le comportement n'est pas spécifié.
+ *      Comportement non spécifié car la ligne 27 lit en dehors du tableau.
+ *      Risque de segfault.
  */
 
 
 char foo(int i) {
-
     return 'a';
 }
 
 
 int main() {
-
-    int A[];
-    char B[];
+    int[] A;
+    char[] B;
     B = map(foo, A);
     // ok until this line
 

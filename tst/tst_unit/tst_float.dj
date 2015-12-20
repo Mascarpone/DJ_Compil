@@ -1,3 +1,5 @@
+// should print 2.2 (with zeros at the end)
+
 
 int main() {
   float x = 1.2 + 1;

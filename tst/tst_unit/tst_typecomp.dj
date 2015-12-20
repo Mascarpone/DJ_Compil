@@ -1,12 +1,16 @@
 /*
  * Ce test décrit la fonctionnalité suivante du compilateur :
- *      Comparisons between the different types
+ *      Comparaisons entre différents types
  *
  * Le résultat attendu de la compilation est :
  *      Pas d'erreur.
  *
  * Le résultat attendu de l'exécution est :
- *
+ *      2 c'est vrai
+ *      On peut comparer des int et des float
+ *      On peut comparer des char entre eux
+ *      On peut comperer des char et des int
+ *      On peut comparer des char et des float
  */
 
 int main() {

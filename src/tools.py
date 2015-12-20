@@ -290,9 +290,7 @@ class Context:
     def close(self):
         '''Set current context back to its parent'''
         if self.isGlobal():
-            # is there a best way to raise an error ?
-            sys.stderr.write("*ERROR*: trying to close global context\n")
-            # raise ... ?
+            internal_error("trying to close global context\n")
         else:
             self.id_type = self.prev.id_type
             self.id_addr = self.prev.id_addr
@@ -392,23 +390,20 @@ class Context:
         for name, t in self.reduce_functions.values():
             te = ArrayType(t)
             fct_t = FunctionType(t, [t, t])
-            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + " %a.arg) {\n"
-            code += "  %a = alloca " + str(te) + "\n"
-            code += "  store " + str(te) + " %a.arg, " + str(te) + "* %a\n"
-            code += "  %a.buff.ptr = getelementptr " + str(te) + "* %a, i32 0, i32 1\n"
-            code += "  %a.buff = load " + str(t) + "** %a.buff.ptr\n"
-            code += "  %a.elt0.ptr = getelementptr " + str(t) + "* %a.buff, i32 0\n"
-            code += "  %a.elt0 = load " + str(t) + "* %a.elt0.ptr\n"
-            code += "  %a.elt1.ptr = getelementptr " + str(t) + "* %a.buff, i32 1\n"
-            code += "  %a.elt1 = load " + str(t) + "* %a.elt1.ptr\n"
+            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + " %a) {\n"
+            code += "  %size = extractvalue "+ str(te) + " %a, 0\n"
+            code += "  %buff = extractvalue " + str(te) + " %a, 1\n"
             code += "  %ret = alloca " + str(t) + "\n"
-            code += "  %init = call " + str(t) + " %f(" + str(t) + " %a.elt0, " + str(t) + " %a.elt1)\n"
-            code += "  store " + str(t) + " %init, " + str(t) + "* %ret\n"
+            code += "  %isempty = icmp eq i32 %size, 0\n"
+            code += "  br i1 %isempty, label %loopreduce_exit, label %readfirst\n\n"
+
+            code += "readfirst:\n"
+            code += "  %first.ptr = getelementptr " + str(t) + "* %buff, i32 0\n"
+            code += "  %first = load " + str(t) + "* %first.ptr\n"
+            code += "  store " + str(t) + " %first, " + str(t) + "* %ret\n"
 
             code += "  %i = alloca i32\n"
-            code += "  store i32 2, i32* %i\n"
-            code += "  %size.ptr = getelementptr " + str(te) + "* %a, i32 0, i32 0\n"
-            code += "  %size = load i32* %size.ptr\n"
+            code += "  store i32 1, i32* %i\n"
             code += "  br label %loopreduce_head\n\n"
 
             code += "loopreduce_head:\n"
@@ -418,9 +413,9 @@ class Context:
 
             code += "loopreduce_body:\n"
             code += "  %ret.val = load " + str(t) + "* %ret\n"
-            code += "  %a.elt.ptr = getelementptr " + str(t) + "* %a.buff, i32 %index\n"
-            code += "  %a.elt = load " + str(t) + "* %a.elt.ptr\n"
-            code += "  %res = call " + str(t) + " %f(" + str(t) + " %ret.val, " + str(t) + " %a.elt)\n"
+            code += "  %elt.ptr = getelementptr " + str(t) + "* %buff, i32 %index\n"
+            code += "  %elt = load " + str(t) + "* %elt.ptr\n"
+            code += "  %res = call " + str(t) + " %f(" + str(t) + " %ret.val, " + str(t) + " %elt)\n"
             code += "  store " + str(t) + " %res, " + str(t) + "* %ret\n"
             code += "  br label %loopreduce_close\n\n"
 

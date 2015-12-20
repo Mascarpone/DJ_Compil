@@ -133,8 +133,8 @@ def t_comment(t):
     t.lexer.lineno += t.value.count('\n')
 
 def t_error(t):
-    print("Illegal character %s" % repr(t.value[0]))
-    t.lexer.skip(1)
+    error(t.lexer.lineno, "Illegal character %s" % repr(t.value[0]))
+    #t.lexer.skip(1)
 
 
 
