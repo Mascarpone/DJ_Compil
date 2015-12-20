@@ -9,7 +9,6 @@ def usage():
     sys.stderr.write("Usage: " + sys.argv[0] + " [ -o output ] input1.[ll|c] input2.[ll|c]\n\n")
     sys.stderr.write("    -o output      Specify an output file. Default is a.out\n")
     sys.stderr.write("\n")
-    sys.stderr.write("Usage: " + sys.argv[0] + " -test path/to/the/test/file.c\n")
 
 
 def runCommand(cmd):
@@ -111,7 +110,9 @@ if __name__ == '__main__':
                 print "Compilation OK. Try to run " + output_file
         elif cc == 2: # clang
             print "Found clang"
-            exit_code, out, err = runCommand("clang -o " + output_file + " ".join(tmp_ll_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext]]))
+            cmd = "clang -o " + output_file + " ".join(tmp_ll_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext]])
+            print cmd
+            exit_code, out, err = runCommand(cmd)
             if exit_code == 0:
                 map(os.remove, tmp_ll_out)
                 print "Compilation OK. Try to run " + output_file
