@@ -578,6 +578,8 @@ def convert(reg, tbefore, tafter, newreg, lineno):
         op = "sext"
     elif (tbefore.equals(ValueType.INT) or tbefore.equals(ValueType.CHAR)) and tafter.equals(ValueType.FLOAT):
         op = "sitofp"
+    elif tbefore.equals(ValueType.INT) and tafter.equals(ValueType.CHAR):
+        op = "trunc"
     else :
         error(lineno, "Invalid implicit conversion.")
 
@@ -1002,4 +1004,4 @@ def p_error(p):
 
 # build parser
 
-yacc.yacc(outputdir="build") #debug=0
+yacc.yacc(outputdir="/tmp") #debug=0

@@ -6,6 +6,7 @@ int main() {
    int i;
    for (i = 0; i < 10; i++) {
        printint(i);
+       printchar('\n');
    }
    return 0;
 }

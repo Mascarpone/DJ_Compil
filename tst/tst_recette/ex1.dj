@@ -1,3 +1,5 @@
+// should print 332833500
+
 int square(int x) {
   return x*x;
 }
@@ -12,5 +14,7 @@ int main() {
   for (i=0; i<1000; i++) A[i]=i;
   int[] t = map(square,A);
   int x=reduce(add,t);
-  return x;
+  printint(x);
+  printchar('\n');
+  return 0;
 }

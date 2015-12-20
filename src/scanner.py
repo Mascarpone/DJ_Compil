@@ -140,6 +140,6 @@ def t_error(t):
 
 
 # Build the lexer
-lexer = lex.lex(outputdir="build")
+lexer = lex.lex(outputdir="/tmp")
 if __name__ == "__main__":
     lex.runmain(lexer)

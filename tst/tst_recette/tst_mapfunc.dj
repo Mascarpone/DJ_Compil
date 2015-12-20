@@ -22,7 +22,7 @@ char foo (char i)
 
 int main()
 {
-    int[5] T;
+    char[5] T;
     T[0] = 24;
     T[1] = 40;
     T[2] = 72;
@@ -35,7 +35,7 @@ int main()
         printchar(W[i]);
     }
 
-    free(W);
+    //free(W);
 
     return 0;
 }

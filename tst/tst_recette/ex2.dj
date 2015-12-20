@@ -1,3 +1,5 @@
+// should print 332833500
+
 int main() {
   int[1000] A;
   int i,x;
@@ -8,5 +10,7 @@ int main() {
   for (i=0; i<1000; i++) {
     x+=A[i]*A[i];
   }
-  return x;
+  printint(x);
+  printchar('\n');
+  return 0;
 }
