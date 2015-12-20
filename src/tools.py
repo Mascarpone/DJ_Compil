@@ -326,9 +326,9 @@ class Context:
             ti = ArrayType(type_in)
             to = ArrayType(type_out)
             fct_t = FunctionType(type_out, [type_in])
-            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %aarg) {\n"
+            code += "define " + str(to) + " " + name + "(" + str(fct_t) + " %f, " + str(ti) + " %a.arg) {\n"
             code += "  %a = alloca " + str(ti) + "\n"
-            code += "  store " + str(ti) + " %aarg, " + str(ti) + "* %a"
+            code += "  store " + str(ti) + " %a.arg, " + str(ti) + "* %a"
             code += "  %i = alloca i32\n"
             code += "  store i32 0, i32* %i\n"
             code += "  ;get the size of the array\n"
@@ -389,10 +389,10 @@ class Context:
         for name, t in self.reduce_functions.values():
             te = ArrayType(t)
             fct_t = FunctionType(t, [t, t])
-            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + " %aarg) {\n"
+            code += "define " + str(t) + " " + name + "(" + str(fct_t) + " %f, " + str(te) + " %a.arg) {\n"
             code += "  %a = alloca " + str(te) + "\n"
-            code += "  store " + str(te) + " %aarg, " + str(te) + "* %a"
-            code += "  %a.buff.ptr = getelementptr " + str(te) + " * %a, i32 0, i32 1\n"
+            code += "  store " + str(te) + " %a.arg, " + str(te) + "* %a\n"
+            code += "  %a.buff.ptr = getelementptr " + str(te) + "* %a, i32 0, i32 1\n"
             code += "  %a.buff = load " + str(t) + "** %a.buff.ptr\n"
             code += "  %a.elt0.ptr = getelementptr " + str(t) + "* %a.buff, i32 0\n"
             code += "  %a.elt0 = load " + str(t) + "* %a.elt0.ptr\n"
