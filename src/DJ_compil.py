@@ -38,7 +38,7 @@ except IOError as e:
 result = yacc.parse(prog)
 
 # check errors
-checkGenericErrors(cc, result)
+#checkGenericErrors(cc, result)
 
 # save result
 if result is None:

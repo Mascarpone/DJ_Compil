@@ -1,5 +1,3 @@
 les tests qui ne passent pas :
 
 tst_for2.dj
-tst_multidimtable.dj
-tst_scope.dj

@@ -2,7 +2,7 @@
 #
 # See DJ_compil.py for full description
 
-import sys
+import sys, platform
 
 
 class bcolors:
@@ -457,8 +457,11 @@ def newGBVar():
 
 def sizeof(t):
     '''return the size of an element of type t'''
-    if t.isArray() or t.isFunction(): # it's a pointer
-        return 8
+    if t.isArray():
+        print (8 if platform.architecture()[0] == "64bit" else 4)
+        return 4 + (8 if platform.architecture()[0] == "64bit" else 4) # int + ptr(62/64)
+    if t.isArray() or t.isFunction():
+        return (8 if platform.architecture() == "64bit" else 4) # ptr(32/64)
     elif t.isValue():
         return [None, 4, 1, 4][t.t]
 

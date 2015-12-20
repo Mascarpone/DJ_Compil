@@ -304,7 +304,6 @@ def p_primary_expression_id(p):
     global cc
 
     # get variable type and check if it has been defined
-    print cc.id_type
     t = cc.getType(p[1])
     if t is None:
         error(p.lineno(1), "The variable '" + p[1] + "' is not defined")
@@ -876,9 +875,15 @@ def p_declarator_list_2(p):
 
 #Statement
 
+def p_statement_compound(p):
+    '''statement : compound_statement'''
+    global cc
+    cc.close()
+    p[0] = {"code" : p[1]["code"]}
+
+
 def p_statement(p):
-    '''statement : compound_statement
-                 | expression_statement
+    '''statement : expression_statement
                  | selection_statement
                  | iteration_statement
                  | jump_statement
@@ -904,6 +909,7 @@ def p_expression_statement_2(p):
 
 def p_selection_statement_1(p):
     '''selection_statement : IF LPAREN expression RPAREN statement'''
+    global cc
     if_head = newLab()
     if_body = newLab()
     if_exit = newLab()
@@ -921,6 +927,7 @@ def p_selection_statement_1(p):
 
 def p_selection_statement_2(p):
     '''selection_statement : IF LPAREN expression RPAREN statement ELSE statement'''
+    global cc
     if_head = newLab()
     if_yes = newLab()
     if_no = newLab()
@@ -967,9 +974,9 @@ def p_selection_statement_3(p):
 
 def p_for_keyword(p):
     '''for_keyword : FOR'''
-    global cc, compound_statement_open_new_cc
+    global cc
     cc.new()
-    compound_statement_open_new_cc = False
+    cc.unactivateOpenNewContext()
     p[0] = {}
 
 def p_iteration_statement_1(p):
@@ -1033,4 +1040,4 @@ def p_error(p):
 
 # build parser
 
-yacc.yacc(outputdir="/tmp") #debug=0
+yacc.yacc(outputdir="/tmp", debug=0) #debug=0
