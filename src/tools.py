@@ -202,6 +202,7 @@ class Context:
         self.id_addr = {}                           # store the allocated adress of variables. key = var name, value = reg containing addr
         self.glob = self if c is None else c.glob   # remember global context if needed. ** UNUSED ** delete it ?
         self.compound_statement_open_new_cc = True  # set it to False to prevent compound_statement from opening a new cc
+        self.let_compound_statement_manage = []     # when compound_statement opens a new context, ir remember it here with a bool to close it
         self.return_types_found = []                # used to check if returned values have a good type
         self.text = {}                              # strings that will be definded as global variables. key = string, value = global name
         self.text_counter = 0                       # a counter to name strings
@@ -259,7 +260,7 @@ class Context:
     def setAddr(self, id, a):
         '''sets the register in which id is allocated to a'''
         self.id_addr[id] = a
-
+# begin of deprecated
     def unactivateOpenNewContext(self):
         '''Sets compound_statement_open_new_cc to false to prevent compound_statement from opening a new context'''
         self.compound_statement_open_new_cc = False
@@ -271,6 +272,23 @@ class Context:
     def compoundStatementOpenNewContext(self):
         '''returns compound_statement_open_new_cc'''
         return self.compound_statement_open_new_cc
+# end of deprecated
+    def claimCCManagement(self):
+        '''Sets opening of CC to manual for the next compound statement opening'''
+        self.compound_statement_open_new_cc = False
+
+    def giveBackCCManagement(self):
+        self.compound_statement_open_new_cc = True
+
+    def pushCCManagementClaim(self):
+        '''Push current status of CC management in list for memory, set it back to automatic, and returns the status before reset'''
+        self.let_compound_statement_manage.append(self.compound_statement_open_new_cc)
+        r = self.compound_statement_open_new_cc
+        self.compound_statement_open_new_cc = True
+        return r
+
+    def popCCManagementClaim(self):
+        return self.let_compound_statement_manage.pop()
 
     def addReturnType(self, t):
         '''sets return_types_found to check return types'''

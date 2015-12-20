@@ -97,8 +97,8 @@ def p_function_definition(p):
 def p_function_declarator(p):
     '''function_declarator : ID'''
     global cc
+    cc.claimCCManagement() # makes compound_statement not opening or closing CC
     cc.new()
-    cc.unactivateOpenNewContext()  # prevent compound statement from opening a new cc
     p[0] = {"name" : p[1]}
 
 
@@ -209,20 +209,24 @@ def p_type_list_2(p):
 def p_compound_statement_begin(p):
     '''compound_statement_begin : LBRACE'''
     global cc
-    if cc.compoundStatementOpenNewContext():
+    if cc.pushCCManagementClaim(): # if it's in auto mode
         cc.new()
-    else:
-        cc.activateOpenNewContext()
     p[0] = {}
 
 
 def p_compound_statement_1(p):
     '''compound_statement : compound_statement_begin RBRACE'''
+    global cc
+    if cc.popCCManagementClaim(): # if it's in auto mode
+        cc.close()
     p[0] = {"code" : ""}
 
 
 def p_compound_statement_2(p):
     '''compound_statement : compound_statement_begin statement_list RBRACE'''
+    global cc
+    if cc.popCCManagementClaim(): # if it's in auto mode
+        cc.close()
     p[0] = {"code" : p[2]["code"]}
 
 
@@ -875,15 +879,9 @@ def p_declarator_list_2(p):
 
 #Statement
 
-def p_statement_compound(p):
-    '''statement : compound_statement'''
-    global cc
-    cc.close()
-    p[0] = {"code" : p[1]["code"]}
-
-
 def p_statement(p):
-    '''statement : expression_statement
+    '''statement : compound_statement
+                 | expression_statement
                  | selection_statement
                  | iteration_statement
                  | jump_statement
@@ -908,8 +906,10 @@ def p_expression_statement_2(p):
     pass
 
 def p_selection_statement_1(p):
-    '''selection_statement : IF LPAREN expression RPAREN statement'''
+    '''selection_statement : if_keyword LPAREN expression RPAREN statement'''
     global cc
+    cc.close()
+    cc.giveBackCCManagement()
     if_head = newLab()
     if_body = newLab()
     if_exit = newLab()
@@ -925,9 +925,18 @@ def p_selection_statement_1(p):
                     + "\n" + if_exit + ":\n"
            }
 
-def p_selection_statement_2(p):
-    '''selection_statement : IF LPAREN expression RPAREN statement ELSE statement'''
+def p_if_keyword(p):
+    '''if_keyword : IF'''
     global cc
+    cc.claimCCManagement()
+    cc.new()
+    p[0] = {}
+
+def p_selection_statement_2(p):
+    '''selection_statement : if_keyword LPAREN expression RPAREN statement else_keyword statement'''
+    global cc
+    cc.close()
+    cc.giveBackCCManagement()
     if_head = newLab()
     if_yes = newLab()
     if_no = newLab()
@@ -947,9 +956,20 @@ def p_selection_statement_2(p):
                     + "\n" + if_exit + ":\n"
            }
 
+def p_else_keyword(p):
+    '''else_keyword : ELSE'''
+    global cc
+    cc.close()
+    cc.claimCCManagement()
+    cc.new()
+    p[0] = {}
+
+
 def p_selection_statement_3(p):
     '''selection_statement : for_keyword LPAREN expression_statement expression_statement expression RPAREN statement'''
     global cc
+    cc.close()
+    cc.giveBackCCManagement()
     loop_init = newLab()
     loop_head = newLab()
     loop_body = newLab()
@@ -977,12 +997,14 @@ def p_for_keyword(p):
     '''for_keyword : FOR'''
     global cc
     cc.new()
-    cc.unactivateOpenNewContext()
+    cc.claimCCManagement()
     p[0] = {"labels" : cc.enterLoop()}
 
 def p_iteration_statement_1(p):
     '''iteration_statement : while_keyword LPAREN expression RPAREN statement'''
     global cc
+    cc.close()
+    cc.giveBackCCManagement()
     loop_body = newLab()
     loop_exit, loop_head = p[1]["labels"]
     cc.exitLoop()
@@ -1001,10 +1023,15 @@ def p_iteration_statement_1(p):
 def p_while_keyword(p):
     '''while_keyword : WHILE'''
     global cc
+    cc.new()
+    cc.claimCCManagement()
     p[0] = {"labels" : cc.enterLoop()}
 
 def p_iteration_statement_2(p):
     '''iteration_statement : do_keyword statement WHILE LPAREN expression RPAREN SEMI'''
+    global cc
+    cc.close()
+    cc.giveBackCCManagement()
     loop_body = newLab()
     loop_exit, loop_tail = p[1]["labels"]
     cc.exitLoop()
@@ -1023,6 +1050,8 @@ def p_iteration_statement_2(p):
 def p_do_keyword(p):
     '''do_keyword : DO'''
     global cc
+    cc.new()
+    cc.claimCCManagement()
     p[0] = {"labels" : cc.enterLoop()}
 
 
