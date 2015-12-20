@@ -111,9 +111,7 @@ if __name__ == '__main__':
                 print "Compilation OK. Try to run " + output_file
         elif cc == 2: # clang
             print "Found clang"
-            cmd = "clang -o " + output_file + " " + " ".join(tmp_ll_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext]])
-            print cmd
-            exit_code, out, err = runCommand(cmd)
+            exit_code, out, err = runCommand("clang -o " + output_file + " " + " ".join(tmp_ll_out) + " " + " ".join([f for f in input_files if not getFileExt(f) in [dj_source_ext]]))
             if exit_code == 0:
                 map(os.remove, tmp_ll_out)
                 print "Compilation OK. Try to run " + output_file
